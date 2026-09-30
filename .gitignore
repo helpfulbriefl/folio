@@ -1,0 +1,15 @@
+bin/
+obj/
+dist/
+out/
+node_modules/
+web/dist/
+*.user
+.vs/
+*.log
+src/Folio/Assets/*.ico
+selftest/
+selftest-out/
+selftest.zip
+SHA256SUMS.txt
+notes.md

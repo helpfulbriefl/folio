@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <Product>Folio</Product>
+    <Company>Folio</Company>
+    <Authors>@yumi_acess</Authors>
+    <Copyright>© 2026 @yumi_acess · MIT</Copyright>
+    <Description>Folio — a paper-minimal tray notepad for Windows</Description>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <DebugType>embedded</DebugType>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+</Project>

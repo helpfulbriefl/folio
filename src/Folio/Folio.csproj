@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>Folio</RootNamespace>
+    <AssemblyName>Folio</AssemblyName>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <ApplicationIcon>Assets\folio.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ForceDesignerDpiUnaware>true</ForceDesignerDpiUnaware>
+    <NoWarn>$(NoWarn);CA1416;WFO1000;WFAC010</NoWarn>
+    <!-- single self-contained Folio.exe (see README → Build) -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <AllowedReferenceRelatedFileExtensions>.none</AllowedReferenceRelatedFileExtensions>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
+    <ProjectReference Include="..\Folio.Core\Folio.Core.csproj" />
+  </ItemGroup>
+
+  <!-- the UI (web/dist, built with `node build.mjs` in web/) is embedded into the exe -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\web\dist\**\*" LogicalName="web/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets\folio.ico" LogicalName="folio.ico" />
+    <EmbeddedResource Include="Assets\folio-light.ico" LogicalName="folio-light.ico" />
+  </ItemGroup>
+
+  <!-- icons are kept in git as base64 text; the .ico files are produced on build -->
+  <UsingTask TaskName="FolioDecodeBase64" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Input ParameterType="System.String" Required="true" />
+      <Output ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var bytes = System.Convert.FromBase64String(System.IO.File.ReadAllText(Input).Trim());
+        if (!System.IO.File.Exists(Output) || System.IO.File.ReadAllBytes(Output).Length != bytes.Length)
+            System.IO.File.WriteAllBytes(Output, bytes);
+      ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="FolioIcons" BeforeTargets="PrepareForBuild">
+    <FolioDecodeBase64 Input="$(MSBuildProjectDirectory)\Assets\folio.ico.b64" Output="$(MSBuildProjectDirectory)\Assets\folio.ico" />
+    <FolioDecodeBase64 Input="$(MSBuildProjectDirectory)\Assets\folio-light.ico.b64" Output="$(MSBuildProjectDirectory)\Assets\folio-light.ico" />
+  </Target>
+  <!-- the WebView2 package also references its WPF control; Folio is WinForms only -->
+  <Target Name="FolioNoWpf" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+  <Target Name="FolioCheckWeb" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('..\..\web\dist\index.html')" Text="web/dist is missing: run `npm ci` and `node build.mjs` in the web folder first." />
+  </Target>
+
+</Project>
