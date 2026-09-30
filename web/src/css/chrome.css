@@ -1,0 +1,129 @@
+/* Folio — window layout: title bar, tabs, toolbar, banners, status bar */
+#app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--wall);color:var(--text);overflow:hidden}
+html.backdrop #app{background:transparent}
+
+/* top resize strips (the host draws the other borders) */
+.resize-top{position:fixed;z-index:95;top:0;left:10px;right:10px;height:5px;cursor:ns-resize}
+.resize-top.l,.resize-top.r{width:10px;height:10px;left:0;right:auto;cursor:nwse-resize}
+.resize-top.r{left:auto;right:0;cursor:nesw-resize}
+html.maximized .resize-top,html.fullscreen .resize-top{display:none}
+
+/* ---------- title bar ---------- */
+.chrome{flex:none;background:var(--chrome);border-bottom:1px solid var(--line);position:relative;z-index:5}
+.titlebar{height:var(--title-h);display:flex;align-items:stretch;padding-left:14px;min-width:0}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650;font-size:14.5px;letter-spacing:-.015em;padding-right:14px;flex:none;transition:color .2s}
+.tabs{display:flex;align-items:stretch;gap:2px;min-width:0;flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{position:relative;display:flex;align-items:center;gap:7px;padding:0 8px 0 11px;color:var(--muted);font-weight:500;font-size:13px;white-space:nowrap;transition:color .15s;flex:none;max-width:240px}
+.tab .nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tab .i{opacity:.85}
+.tab:hover{color:var(--text-2)}
+.tab.on{color:var(--text)}
+.tab.on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;border-radius:2px;background:var(--text);animation:grow .25s var(--ease)}
+.tab .x{display:grid;place-items:center;width:18px;height:18px;border-radius:5px;opacity:0;color:var(--muted);flex:none;transition:opacity .12s,background .12s}
+.tab.on .x,.tab:hover .x{opacity:1}
+.tab .x:hover{background:var(--active);color:var(--text)}
+.tab .dirty{width:7px;height:7px;border-radius:50%;background:var(--coral);margin-left:-1px;flex:none}
+.tab .dirty+.x{margin-left:-2px}
+.tab.dragging{z-index:3;transition:none;color:var(--text);background:var(--hover);border-radius:8px 8px 0 0}
+.tab-add{align-self:center;display:grid;place-items:center;width:30px;height:28px;border-radius:7px;color:var(--muted);flex:none}
+.tab-add:hover{background:var(--hover);color:var(--text)}
+.tabs>.drag{min-width:24px}
+.tb-right{display:flex;align-items:center;gap:2px;margin-left:8px;flex:none}
+.winctl{display:flex;height:var(--title-h);margin-left:10px;align-self:flex-start}
+.winctl span{width:46px;display:grid;place-items:center;color:var(--text-2);transition:background .1s}
+.winctl span:hover{background:var(--hover)}
+.winctl span:active{background:var(--active)}
+.winctl span.close:hover{background:#C42B1C;color:#fff}
+.winctl span.close:active{background:#B32A1C;color:#fff}
+.winctl svg{width:10px;height:10px;stroke:currentColor;stroke-width:1;fill:none;shape-rendering:geometricPrecision}
+html.inactive .brand,html.inactive .tab.on,html.inactive .winctl span{color:var(--muted)}
+html.inactive .tab.on::after{background:var(--muted)}
+html.inactive .brand .logo{opacity:.7}
+
+/* ---------- toolbar ---------- */
+.toolbar{height:var(--tool-h);display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;border-top:1px solid var(--line);min-width:0}
+.menubar{display:flex;gap:1px;flex:none}
+.mb{padding:6px 10px;border-radius:7px;color:var(--text-2);font-weight:500;transition:background .12s,color .12s;white-space:nowrap}
+.mb:hover,.mb.open{background:var(--active);color:var(--text)}
+.toolbar>.drag{min-width:8px}
+.seg{display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--seg);border:1px solid var(--line);flex:none}
+.seg button{display:flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:7px;color:var(--muted);font-weight:550;font-size:12.5px;white-space:nowrap;transition:color .15s,background .2s,box-shadow .2s}
+.seg button:hover{color:var(--text-2)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px var(--line)}
+html[data-dark="1"] .seg button.on{background:var(--line)}
+.chip-btn{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:9px;border:1px solid var(--line);color:var(--text-2);font-weight:550;font-size:12.5px;background:var(--surface);white-space:nowrap;flex:none}
+.chip-btn:hover{color:var(--text)}
+.chip-btn.on{background:var(--teal-soft);color:var(--teal-ink);border-color:transparent}
+.cmdk{display:flex;align-items:center;gap:8px;height:32px;width:220px;padding:0 6px 0 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--muted);margin-left:4px;flex:none;min-width:0;transition:border-color .12s}
+.cmdk:hover{border-color:var(--line-2);color:var(--text-2)}
+.cmdk .ph{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmdk kbd{margin-left:auto}
+.ai-btn.on{box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 20%,transparent)}
+
+/* narrow windows: collapse labels progressively */
+@media (max-width:1380px){.cmdk{width:auto}.cmdk .ph{display:none}}
+@media (max-width:1240px){.toolbar .seg+.seg button span,.toolbar .chip-btn span{display:none}.toolbar .seg+.seg button{padding:0 8px}.toolbar .seg+.seg button.on span{display:inline}}
+@media (max-width:1080px){.toolbar .seg button span{display:none}.toolbar .seg button{padding:0 8px}.ai-btn span{display:none}.ai-btn{padding:0 9px}.mb{padding:6px 8px}.cmdk kbd{display:none}}
+@media (max-width:900px){.toolbar .seg+.seg button.on span{display:none}.brand span{display:none}}
+
+/* ---------- body ---------- */
+.body{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--bg);position:relative}
+#row{flex:1;display:flex;min-height:0;position:relative}
+.work{flex:1;min-width:0;position:relative;overflow:hidden}
+.ed-host,.reader-host{position:absolute;inset:0}
+#side{flex:none;display:flex;min-height:0}
+#side:empty{display:none}
+
+/* banners */
+.encbar{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 10px 6px 16px;background:var(--amber-soft);color:var(--amber-ink);border-bottom:1px solid var(--line);font-weight:500;flex-wrap:wrap}
+.encbar.enter{animation:barIn .3s var(--ease)}
+.encbar>span:not(.grow){min-width:0}
+.encbar b{font-weight:650}
+.encbar .btn{height:28px;font-size:12.5px;padding:0 11px}
+.encbar .btn.ghost{background:transparent;border-color:color-mix(in srgb,currentColor 32%,transparent);color:inherit}
+.encbar .btn.ghost:hover{background:color-mix(in srgb,currentColor 8%,transparent)}
+.encbar .btn.primary{background:var(--amber-ink);color:#fff}
+.encbar .icon-btn{color:inherit;width:28px;height:28px}
+.encbar .icon-btn:hover{background:color-mix(in srgb,currentColor 10%,transparent)}
+.encbar.warn{background:var(--peach-soft);color:var(--peach-ink)}
+.encbar.warn .btn.primary{background:var(--peach-ink)}
+.encbar.err{background:var(--coral-soft);color:var(--coral-ink)}
+.encbar.err .btn.primary{background:var(--coral-ink)}
+html[data-dark="1"] .encbar .btn.primary{color:#16171A}
+
+/* ---------- status bar ---------- */
+.status{flex:none;height:var(--status-h);display:flex;align-items:center;gap:2px;padding:0 8px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);background:var(--chrome-2);position:relative;z-index:4;min-width:0;overflow:hidden}
+.st{display:flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;white-space:nowrap;transition:background .12s;flex:none}
+button.st:hover,.st.zoomctl:hover{background:var(--hover);color:var(--text-2)}
+.st.hl{background:var(--sky-soft);color:var(--sky-ink)}
+.st .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.st.ok{color:var(--teal-ink)}
+.st.warn{color:var(--coral-ink)}
+.st .mut{opacity:.8}
+.st.unsaved{color:var(--text-2)}
+.status>.grow{min-width:8px}
+.zoomctl{gap:8px}
+.zoomctl button{display:grid;place-items:center;width:18px;height:18px;border-radius:5px;color:var(--muted)}
+.zoomctl button:hover{background:var(--active);color:var(--text)}
+.zoomctl .track{position:relative;width:86px;height:4px;border-radius:4px;background:var(--line-2)}
+.zoomctl .track::before{content:"";position:absolute;inset:-8px 0}
+.zoomctl .fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--text-2);transition:width .15s var(--ease)}
+.zoomctl .knob{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--surface);box-shadow:0 0 0 1px var(--line-2),0 1px 3px rgba(0,0,0,.2);transition:left .15s var(--ease)}
+.zoomctl b{font-weight:600;min-width:34px;text-align:right;color:var(--text-2)}
+@media (max-width:1100px){.zoomctl .track,.zoomctl button{display:none}}
+@media (max-width:940px){.st[data-st=lang],.st[data-st=eol]{display:none}}
+
+/* ---------- window states ---------- */
+html.fullscreen .chrome{position:fixed;top:0;left:0;right:0;z-index:80;transform:translateY(calc(-100% + 3px));transition:transform .22s var(--ease) .25s;background:var(--chrome-2);box-shadow:var(--shadow-pop)}
+html.fullscreen .chrome:hover,html.fullscreen .chrome:focus-within{transform:none;transition-delay:0s}
+html.fullscreen .winctl{display:none}
+html.focus-mode .toolbar,html.focus-mode .status,html.focus-mode #toc{display:none}
+html.focus-mode .chrome{border-bottom-color:transparent;background:var(--bg)}
+html.focus-mode .titlebar{opacity:.55;transition:opacity .25s}
+html.focus-mode .titlebar:hover{opacity:1}
+/* WebView2 drag regions: Windows itself moves / snaps / maximizes the window from these areas */
+.titlebar.drag,.titlebar .drag,.toolbar>.drag{-webkit-app-region:drag;app-region:drag}
+.titlebar .tab,.titlebar .tab-add,.titlebar .tb-right,.titlebar button,.resize-top{-webkit-app-region:no-drag;app-region:no-drag}
+html.fullscreen .titlebar,html.fullscreen .titlebar .drag,html.fullscreen .toolbar>.drag{-webkit-app-region:no-drag;app-region:no-drag}
+.scrim,.pal-scrim,.dd,.toast,.hud,.drop-ov,.tab.dragging{-webkit-app-region:no-drag;app-region:no-drag}
