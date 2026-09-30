@@ -22,13 +22,14 @@ public interface ISpellCheckerFactory {
 }
 [ComImport, Guid("B6FD0B71-E2BC-4653-8D05-F197E412770B"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 public interface ISpellChecker {
+  string LanguageTag { [return: MarshalAs(UnmanagedType.LPWStr)] get; }
   IEnumSpellingError Check([MarshalAs(UnmanagedType.LPWStr)] string text);
   IEnumString Suggest([MarshalAs(UnmanagedType.LPWStr)] string word);
   void Add([MarshalAs(UnmanagedType.LPWStr)] string word);
   void Ignore([MarshalAs(UnmanagedType.LPWStr)] string word);
   void AutoCorrect([MarshalAs(UnmanagedType.LPWStr)] string from, [MarshalAs(UnmanagedType.LPWStr)] string to);
   byte GetOptionValue([MarshalAs(UnmanagedType.LPWStr)] string optionId);
-  string LanguageTag { [return: MarshalAs(UnmanagedType.LPWStr)] get; }
+  IEnumString OptionIds { get; }
   string Id { [return: MarshalAs(UnmanagedType.LPWStr)] get; }
   string LocalizedName { [return: MarshalAs(UnmanagedType.LPWStr)] get; }
   uint add_SpellCheckerChanged(IntPtr handler);
@@ -50,7 +51,8 @@ public static class SpellProbe {
   static List<string> Drain(IEnumString e) { var l = new List<string>(); var a = new string[1]; while (e != null && e.Next(1, a, IntPtr.Zero) == 0) l.Add(a[0]); return l; }
   public static string Run() {
     var f = (ISpellCheckerFactory)new SpellCheckerFactoryCo();
-    var r = "langs=" + string.Join(",", Drain(f.SupportedLanguages)) + " ru=" + f.IsSupported("ru-RU") + " en=" + f.IsSupported("en-US");
+    var r = "langs=" + string.Join(",", Drain(f.SupportedLanguages));
+    r += " ru=" + f.IsSupported("ru-RU") + " en=" + f.IsSupported("en-US");
     var c = f.CreateSpellChecker("en-US");
     var en = c.ComprehensiveCheck("Helo wrld, this is is a test");
     ISpellingError err;
