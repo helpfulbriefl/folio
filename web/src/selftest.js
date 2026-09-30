@@ -30,14 +30,17 @@ async function until(fn, ms = 5000, step = 100) {
   return false;
 }
 function check(name, ok, detail = '') { R.checks.push({ name, ok: !!ok, detail: String(detail).slice(0, 300) }); log(ok ? 'PASS' : 'FAIL', name, detail); }
-async function shot(name, wait = 500) {
+async function shot(name, wait = 500, keepToasts = false) {
   await sleep(wait);
+  // toasts left over from the previous step would only clutter the picture
+  const quiet = keepToasts ? null : document.head.appendChild(Object.assign(document.createElement('style'), { textContent: '.toast{visibility:hidden!important}' }));
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   try {
     if (window.folioShot) await window.folioShot(name);
     else await host.call('selftest.shot', { name });
     R.shots.push(name);
   } catch (e) { R.errors.push('shot ' + name + ': ' + (e.message || e)); }
+  finally { quiet?.remove(); }
 }
 async function step(name, fn) {
   const t0 = Date.now();
