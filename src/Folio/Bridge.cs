@@ -52,7 +52,7 @@ internal sealed partial class MainForm
 
             // ---------------------------------------------------------------- window
             case "win.drag":
-                if (_app.SelfTestMode) Log.Info($"self-test: win.drag (button down: {Native.LeftButtonDown()}, clicks: {N(p, "detail", 0)})");
+                if (_app.SelfTestMode) Log.Info($"self-test: win.drag (button down: {Native.LeftButtonDown()})");
                 StartDrag();
                 return true;
             case "win.resize": StartResize(S(p, "edge")); return true;

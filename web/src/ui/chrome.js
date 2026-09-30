@@ -75,18 +75,28 @@ export function buildChrome(root) {
 function wireTitlebar(root) {
   const tb = $('.titlebar', root);
   // With WebView2 drag regions (CSS app-region) Windows moves the window itself; this is the fallback for old runtimes.
-  let last = { t: -1e9, x: 0, y: 0 };
+  // The window is moved by Windows itself (the host sends WM_NCLBUTTONDOWN), but only once the mouse
+  // really moves: a plain click never enters the move loop, so double clicks still reach the page.
+  let press = null, last = { t: -1e9, x: 0, y: 0 };
   tb.addEventListener('mousedown', e => {
     if (e.button !== 0 || APP.sys?.nativeDrag) return;
     if (e.target.closest('.tab, .tab-add, .tb-right, button')) return;
     if (!e.target.closest('.drag')) return;
-    // the host takes the mouse for the drag, so Chromium may not count the second click: check it here
     const now = performance.now();
     const dbl = e.detail === 2 || (now - last.t <= (APP.sys?.dblclickMs || 500) && Math.abs(e.screenX - last.x) <= 4 && Math.abs(e.screenY - last.y) <= 4);
     last = dbl ? { t: -1e9, x: 0, y: 0 } : { t: now, x: e.screenX, y: e.screenY };
+    press = null;
     if (dbl) { host.send('win.maximize', { why: 'dblclick' }); return; }
-    host.send('win.drag', { detail: e.detail });
+    press = { x: e.screenX, y: e.screenY };
   });
+  addEventListener('mousemove', e => {
+    if (!press) return;
+    if (!(e.buttons & 1)) { press = null; return; }
+    if (Math.abs(e.screenX - press.x) < 4 && Math.abs(e.screenY - press.y) < 4) return;
+    press = null;
+    host.send('win.drag');
+  });
+  addEventListener('mouseup', () => { press = null; });
   tb.addEventListener('contextmenu', e => {
     if (e.target.closest('.tab')) return;
     if (e.target.closest('.drag')) { e.preventDefault(); if (!APP.sys?.nativeDrag) host.send('win.sysmenu', { x: e.screenX, y: e.screenY }); }

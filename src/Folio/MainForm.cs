@@ -21,8 +21,7 @@ internal sealed partial class MainForm : Form
     bool _inited, _allowClose, _exitRequested, _fullscreen, _startHidden;
     Rectangle _preFullBounds;
     FormWindowState _preFullState;
-    long _lastDragTick, _lastMaxToggle;
-    Point _lastDragPos;
+    long _lastMaxToggle;
     public bool NativeDrag => false; // WebView2 app-region support is not used (see OnCoreReady)
 
     public MainForm(FolioApp app, bool primary, IEnumerable<string> files, bool startHidden)
@@ -199,20 +198,11 @@ internal sealed partial class MainForm : Form
         WindowState = WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized;
     }
 
+    /// <summary>The page saw the mouse move with the button held on the title bar: let Windows move the window (snap, drag-to-restore included).</summary>
     void StartDrag()
     {
         if (_fullscreen || !Native.LeftButtonDown()) return;
         Native.GetCursorPos(out var p);
-        var now = Environment.TickCount64;
-        int dx = Native.GetSystemMetrics(Native.SM_CXDOUBLECLK), dy = Native.GetSystemMetrics(Native.SM_CYDOUBLECLK);
-        if (now - _lastDragTick <= Native.GetDoubleClickTime() && Math.Abs(p.X - _lastDragPos.X) <= dx && Math.Abs(p.Y - _lastDragPos.Y) <= dy)
-        {
-            _lastDragTick = 0;
-            ToggleMaximize();
-            return;
-        }
-        _lastDragTick = now;
-        _lastDragPos = new Point(p.X, p.Y);
         Native.ReleaseCapture();
         Native.SendMessage(Handle, Native.WM_NCLBUTTONDOWN, (IntPtr)Native.HTCAPTION, (IntPtr)((p.Y << 16) | (p.X & 0xFFFF)));
     }

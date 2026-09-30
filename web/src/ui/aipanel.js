@@ -99,11 +99,19 @@ function msgHTML(m, i) {
 }
 
 const vis = s => { const x = s.length > 60 ? s.slice(0, 57) + '…' : s; return x.replace(/\n/g, '↵').replace(/^ +| +$| {2,}/g, m => '␣'.repeat(m.length)); };
+// whitespace both sides share at the edges is not part of the change: leave it out of the list
+function edgeTrim(a, b) {
+  if (!a || !b) return [a, b];
+  let i = 0, j = 0;
+  while (i < a.length && i < b.length && a[i] === b[i] && /\s/.test(a[i])) i++;
+  while (j < a.length - i && j < b.length - i && a[a.length - 1 - j] === b[b.length - 1 - j] && /\s/.test(a[a.length - 1 - j])) j++;
+  return [a.slice(i, a.length - j), b.slice(i, b.length - j)];
+}
 function changesHTML(m) {
   if (!editor.view) return '';
   const list = proposalOf(editor.view.state);
   if (!list.length) return m.resolved ? `<div class="chg-done">${I('circle-check', 'xs')}${esc(t(m.resolved === 'accepted' ? 'ai.accepted' : 'ai.rejected'))}</div>` : '';
-  const rows = list.slice(0, 8).map(c => `<div class="chg" data-chg="${c.id}"><span class="dif">${c.old ? `<s>${esc(vis(c.old))}</s>` : ''}${c.old && c.insert ? `<span class="ar">→</span>` : ''}${c.insert ? `<span class="to">${esc(vis(c.insert))}</span>` : ''}</span><span class="yn"><span data-yes="${c.id}" title="${esc(t('ai.accept'))}">${I('check', 'xs')}</span><span data-no="${c.id}" title="${esc(t('ai.reject'))}">${I('x', 'xs')}</span></span></div>`).join('');
+  const rows = list.slice(0, 8).map(c => { const [o, n] = edgeTrim(c.old, c.insert); return `<div class="chg" data-chg="${c.id}"><span class="dif">${o ? `<s>${esc(vis(o))}</s>` : ''}${o && n ? `<span class="ar">→</span>` : ''}${n ? `<span class="to">${esc(vis(n))}</span>` : ''}</span><span class="yn"><span data-yes="${c.id}" title="${esc(t('ai.accept'))}">${I('check', 'xs')}</span><span data-no="${c.id}" title="${esc(t('ai.reject'))}">${I('x', 'xs')}</span></span></div>`; }).join('');
   const more = list.length > 8 ? `<div class="chg more">${esc(t('ai.more', { n: list.length - 8 }))}</div>` : '';
   return `<div class="card changes">${rows}${more}</div><div class="chg-acts"><button class="btn primary sm" data-ai="acceptAll">${I('check-check', 'xs')}${esc(t('ai.acceptAll'))}</button><button class="btn ghost sm" data-ai="rejectAll">${esc(t('ai.rejectAll'))}</button><span class="kbh">Ctrl+Shift+Enter</span></div>`;
 }
