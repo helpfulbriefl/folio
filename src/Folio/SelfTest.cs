@@ -163,14 +163,14 @@ internal sealed class SelfTest
         await Task.Delay(400);
         ScreenShot("21-after-window-checks");
 
-        // 5) native frame with the dark theme and with real Mica behind the glass theme (Windows 11)
+        // 5) the native frame with the dark and the glass theme
         await Js(w, "__folio.settings.set('theme', 'graphite')");
         await Task.Delay(1200);
         ScreenShot("22-graphite-frame");
-        await Js(w, "__folio.settings.set('backdrop', true); __folio.settings.set('theme', 'glass')");
-        await Task.Delay(1500);
-        ScreenShot("23-glass-backdrop");
-        await Js(w, "__folio.settings.set('backdrop', false); __folio.settings.set('theme', 'paper')");
+        await Js(w, "__folio.settings.set('theme', 'glass')");
+        await Task.Delay(1200);
+        ScreenShot("23-glass-frame");
+        await Js(w, "__folio.settings.set('theme', 'paper')");
         await Task.Delay(600);
     }
 

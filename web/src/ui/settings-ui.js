@@ -6,7 +6,6 @@ import { host } from '../host.js';
 import { modal, toast, confirm, prompt } from './dialogs.js';
 import { openMenu } from './menu.js';
 import { allCommands, titleOf, keysOf, prettyKeys, rebuildKeymap, eventKey, getCommand, altKeys } from '../commands.js';
-import { caps } from '../theme.js';
 import { PROVIDERS, aiState, refreshKey, complete } from '../ai/ai.js';
 import { THEMES } from './menus.js';
 import { keyCaps } from './tools.js';
@@ -83,7 +82,7 @@ const SEC = {
       txt('quickNotesFile', { placeholder: (APP.sys.notesDir || 'Documents\\Folio') + '\\' + t('qn.defaultFile'), btn: `<button class="btn ghost sm" data-act="pickNotes">${esc(t('set.browse'))}</button>` })),
 
   appearance: () => sec('set.themeH', `<div class="themes">${THEMES.map(([id]) => themeCard(id)).join('')}</div>` +
-      grid(tg('systemTheme', { label: t('theme.system'), hint: false }), tg('smoothTheme'), tg('animations'), tg('backdrop', { disabled: !caps.backdrop }))) +
+      grid(tg('systemTheme', { label: t('theme.system'), hint: false }), tg('smoothTheme'), tg('animations'))) +
     (val('theme') === 'system' ? sec('', sel('themeLight', [['paper', t('theme.paper')], ['sepia', t('theme.sepia')], ['glass', t('theme.glass')]]) + sel('themeDark', [['graphite', t('theme.graphite')]])) : '') +
     sec('set.fontsH', fontRow('fontUi', 'ui') + fontRow('fontText', 'text') + fontRow('fontMono', 'mono') + fontRow('fontRead', 'read')) +
     sec('set.sizesH', slider('fontSize', 12, 26, 0.5, v => v + ' px') + slider('lineHeight', 1.2, 2.2, 0.05, v => (+v).toFixed(2)) + slider('sheetWidth', 560, 1400, 20, v => v + ' px') + slider('codeFontSize', 10, 22, 0.5, v => v + ' px') +
@@ -206,7 +205,7 @@ function afterSet(k) {
 function resetSection(s) {
   const keys = {
     general: ['lang', 'restoreSession', 'hotExit', 'closeToTray', 'trayIcon', 'startMinimized', 'escToTray', 'autosave', 'recentMax', 'hotkeyQuickNote', 'hotkeyShow', 'quickNotesFile'],
-    appearance: ['theme', 'themeLight', 'themeDark', 'smoothTheme', 'animations', 'backdrop', 'fontUi', 'fontText', 'fontMono', 'fontRead', 'fontSize', 'lineHeight', 'sheetWidth', 'codeFontSize', 'uiScale'],
+    appearance: ['theme', 'themeLight', 'themeDark', 'smoothTheme', 'animations', 'fontUi', 'fontText', 'fontMono', 'fontRead', 'fontSize', 'lineHeight', 'sheetWidth', 'codeFontSize', 'uiScale'],
     editor: ['wrap', 'wrapCode', 'lineNumbers', 'lineNumbersCode', 'minimap', 'toc', 'statusBar', 'highlightLine', 'wheelZoom', 'autoPairs', 'insertSpaces', 'markdownInTxt', 'tabSize', 'defaultMode'],
     reader: ['reader', 'copy'], encodings: ['encDefault', 'bomDefault', 'eolDefault', 'fallbackEncoding', 'legacyBanner'],
     proof: ['spellLangs', 'punctuation', 'spellInStandard'], ai: ['ai'], keys: ['keys'], updates: ['updates'], advanced: [],

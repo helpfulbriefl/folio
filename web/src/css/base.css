@@ -92,13 +92,11 @@ html[data-theme=glass]{
  color-scheme:light;
 }
 /* real Windows 11 acrylic behind a transparent WebView */
-html.backdrop[data-theme=glass]{--wall:transparent;--chrome:rgba(255,255,255,.3);--bg:rgba(255,255,255,.52);--side:rgba(255,255,255,.34)}
 
 /* ---------- reset ---------- */
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden}
 html{background:var(--solid)}
-html.backdrop{background:transparent}
 body{font:13px/1.45 var(--ui);color:var(--text);-webkit-font-smoothing:antialiased;font-feature-settings:"cv05","cv08";user-select:none;-webkit-user-select:none;cursor:default}
 input,textarea,[contenteditable],.cm-content,.blk-body,.md,.msg-u,.dlg-t p,.logs-b,.diff,pre,code{user-select:text;-webkit-user-select:text}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:default;text-align:left;-webkit-app-region:no-drag}

@@ -9,7 +9,6 @@ export const DEFAULTS = {
   themeDark: 'graphite',
   smoothTheme: true,
   animations: true,
-  backdrop: false,           // real Mica/Acrylic behind the glass theme (Windows 11)
   nativeFrame: false,
   zoom: 1,
   wheelZoom: true,

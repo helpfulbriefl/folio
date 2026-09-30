@@ -23,7 +23,7 @@ internal sealed partial class MainForm : Form
     FormWindowState _preFullState;
     long _lastDragTick, _lastMaxToggle;
     Point _lastDragPos;
-    public bool NativeDrag { get; private set; }
+    public bool NativeDrag => false; // WebView2 app-region support is not used (see OnCoreReady)
 
     public MainForm(FolioApp app, bool primary, IEnumerable<string> files, bool startHidden)
     {
@@ -175,18 +175,6 @@ internal sealed partial class MainForm : Form
     {
         if (!IsHandleCreated) return;
         Native.SetDwm(Handle, Native.OsBuild >= 18985 ? Native.DWMWA_USE_IMMERSIVE_DARK_MODE : Native.DWMWA_USE_IMMERSIVE_DARK_MODE_OLD, dark ? 1 : 0);
-    }
-
-    void ApplyBackdrop(bool on, Color bg)
-    {
-        if (!IsHandleCreated) return;
-        bool can = Native.OsBuild >= 22621;
-        on &= can;
-        var margins = on ? new Native.MARGINS { Left = -1, Right = -1, Top = -1, Bottom = -1 } : new Native.MARGINS();
-        try { Native.DwmExtendFrameIntoClientArea(Handle, ref margins); } catch { }
-        if (can) Native.SetDwm(Handle, Native.DWMWA_SYSTEMBACKDROP_TYPE, on ? 3 : 1);
-        BackColor = on ? Color.Black : bg;
-        _web.DefaultBackgroundColor = on ? Color.Transparent : bg;
     }
 
     void SendState()
@@ -354,7 +342,8 @@ internal sealed partial class MainForm : Form
             try { s.IsPinchZoomEnabled = false; } catch { }
             try { s.IsSwipeNavigationEnabled = false; } catch { }
             try { s.IsGeneralAutofillEnabled = false; s.IsPasswordAutosaveEnabled = false; } catch { }
-            try { s.IsNonClientRegionSupportEnabled = true; NativeDrag = true; } catch (Exception ex) { Log.Info("Drag regions are not supported by this WebView2 runtime: " + ex.Message); }
+            // the page starts window drags itself (win.drag → WM_NCLBUTTONDOWN); WebView2 app-region support stays off
+            try { s.IsNonClientRegionSupportEnabled = false; } catch { }
             core.AddWebResourceRequestedFilter(WebAssets.Origin + "/*", CoreWebView2WebResourceContext.All);
             core.WebResourceRequested += OnResource;
             core.WebMessageReceived += OnWebMessage;

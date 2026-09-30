@@ -68,7 +68,8 @@ internal sealed partial class MainForm
                 bool dark = B(p, "dark");
                 var bg = ParseColor(S(p, "bg"), dark ? Color.FromArgb(0x1A, 0x1B, 0x1E) : Color.FromArgb(0xF6, 0xF5, 0xF1));
                 ApplyDark(dark);
-                ApplyBackdrop(S(p, "backdrop") == "acrylic", bg);
+                BackColor = bg;
+                _web.DefaultBackgroundColor = bg;
                 _app.ThemeChanged(this, dark, bg);
                 return true;
             }

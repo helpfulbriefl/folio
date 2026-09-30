@@ -48,7 +48,7 @@ function render(fresh) {
 
 function issueHTML(i) {
   const s0 = i.sugg?.[0];
-  const show = v => (v === ' ' ? '␣' : v === '' ? '∅' : v);
+  const show = v => (v === '' ? '∅' : v.replace(/^ +| +$| {2,}/g, m => '␣'.repeat(m.length)));
   return `<div class="card issue ${i.from === activeFrom ? 'on' : ''}" data-iss="${i.from}:${i.to}">
     <div class="w"><span class="dotc" style="background:${i.kind === 'spell' ? 'var(--coral)' : 'var(--accent)'}"></span>${i.word != null ? `<s>${esc(show(i.word))}</s>` : ''}${s0 != null ? `<span class="ar">→</span><span class="to">${esc(show(s0))}</span>` : ''}</div>
     <div class="m">${esc(i.msg || t('proof.spelling'))}${i.sugg?.length > 1 ? ` · ${esc(t('proof.alts'))}: ${i.sugg.slice(1, 4).map(x => esc(show(x))).join(', ')}` : ''}</div>

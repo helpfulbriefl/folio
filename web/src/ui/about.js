@@ -38,7 +38,7 @@ export function openAbout() {
       <button class="btn ghost sm" data-url="${SITE}">${I('globe', 'xs')}${esc(t('about.site'))}</button>
     </div>
     <div class="upd"></div>
-    <div class="ab-foot"><span>© 2026 yumi · ${esc(t('about.license'))}</span><span class="grow"></span><span class="mut">${esc(sys.os || '')}</span><button class="btn primary sm" data-close>${esc(t('dlg.close'))}</button></div></div>`);
+    <div class="ab-foot"><span>© 2026 @yumi_acess · ${esc(t('about.license'))}</span><span class="grow"></span><span class="mut">${esc(sys.os || '')}</span><button class="btn primary sm" data-close>${esc(t('dlg.close'))}</button></div></div>`);
   dlg = modal(box, { cls: 'm-about', label: t('cmd.help.about'), onClose: () => { dlg = null; } });
   box.addEventListener('click', e => {
     const u = e.target.closest('[data-url]');

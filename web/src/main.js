@@ -36,7 +36,6 @@ async function boot() {
   setLang(pickLang(settings.get('lang'), app.locale));
   Object.assign(APP, { version: init.version || APP.version, sys: init.sys || {}, spellLangs: init.spell?.langs || [] });
   caps.win11 = !!init.sys?.win11;
-  caps.backdrop = (init.sys?.build || 0) >= 22621;
   proofAvailable(init.spell?.langs || []);
   aiState.hasKey = !!init.hasAiKey;
   aiState.checked = init.hasAiKey !== undefined;

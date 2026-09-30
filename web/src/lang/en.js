@@ -208,7 +208,6 @@ export default {
   'set.recentMax': 'Recent files in the list', 'set.hotkeyQuickNote': 'Quick note', 'set.hotkeyShow': 'Show Folio', 'set.global': 'works in any program',
   'set.quickNotesFile': 'Notes file', 'set.browse': 'Browse…',
   'set.smoothTheme': 'Smooth theme change', 'set.animations': 'Animations', 'set.animations.h': 'Page turns, panels sliding in',
-  'set.backdrop': 'Mica effect', 'set.backdrop.h': 'See-through window for Glass, Windows 11',
   'set.themeLight': 'Light theme', 'set.themeDark': 'Dark theme',
   'set.fontUi': 'Interface', 'set.fontText': 'Text', 'set.fontMono': 'Code', 'set.fontRead': 'Reading', 'set.embedded': 'Built in', 'set.system': 'Installed in Windows',
   'set.fontSize': 'Text size', 'set.lineHeight': 'Line spacing', 'set.sheetWidth': 'Sheet width', 'set.codeFontSize': 'Code size', 'set.uiScale': 'Interface scale',

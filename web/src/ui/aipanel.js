@@ -98,7 +98,7 @@ function msgHTML(m, i) {
   return `<div class="msg-a" data-m="${i}"><span class="av ai">AI</span><div class="txt">${body}${changes}${tools}</div></div>`;
 }
 
-const vis = s => { const x = s.length > 60 ? s.slice(0, 57) + '…' : s; return x.replace(/\n/g, '↵').replace(/^ +$/, '␣'); };
+const vis = s => { const x = s.length > 60 ? s.slice(0, 57) + '…' : s; return x.replace(/\n/g, '↵').replace(/^ +| +$| {2,}/g, m => '␣'.repeat(m.length)); };
 function changesHTML(m) {
   if (!editor.view) return '';
   const list = proposalOf(editor.view.state);

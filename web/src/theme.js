@@ -5,7 +5,7 @@ import { bus, clamp } from './util.js';
 
 const mq = matchMedia('(prefers-color-scheme: dark)');
 export const DARK_THEMES = new Set(['graphite']);
-export const caps = { backdrop: false, win11: false };
+export const caps = { win11: false };
 
 export function resolvedTheme() {
   const th = settings.get('theme');
@@ -26,10 +26,8 @@ export function applyTheme() {
   }
   root.dataset.theme = th;
   root.dataset.dark = dark ? '1' : '0';
-  const backdrop = th === 'glass' && !!settings.get('backdrop') && caps.backdrop;
-  root.classList.toggle('backdrop', backdrop);
   const cs = getComputedStyle(root);
-  host.send('win.theme', { theme: th, dark, backdrop: backdrop ? 'acrylic' : 'none', bg: cs.getPropertyValue('--solid').trim() || (dark ? '#1A1B1E' : '#F6F5F1') });
+  host.send('win.theme', { theme: th, dark, bg: cs.getPropertyValue('--solid').trim() || (dark ? '#1A1B1E' : '#F6F5F1') });
   first = false;
   bus.emit('theme', th);
 }
@@ -86,7 +84,7 @@ export function initTheme() {
   applyTheme();
   mq.addEventListener('change', () => { if (settings.get('theme') === 'system') applyTheme(); });
   settings.on('*', path => {
-    if (['theme', 'themeLight', 'themeDark', 'backdrop'].includes(path) || path === '') applyTheme();
+    if (['theme', 'themeLight', 'themeDark'].includes(path) || path === '') applyTheme();
     if (/^(zoom|font|lineHeight|sheetWidth|codeFontSize|animations|reader)/.test(path) || path === '') applySizes();
     if (path === 'uiScale' || path === '') host.send('win.uiScale', { factor: settings.get('uiScale') || 1 });
   });

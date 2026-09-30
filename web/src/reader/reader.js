@@ -196,7 +196,7 @@ export function goToBlock(i) {
 
 // ---------- outline ----------
 function excerpt(text, n = 80) {
-  return mdToPlain(text).replace(/\s+/g, ' ').slice(0, n);
+  return mdToPlain(text).replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]+/gm, '').replace(/^>[ \t]?/gm, '').replace(/\s+/g, ' ').slice(0, n);
 }
 function renderOutline() {
   const box = $('.ol', root);

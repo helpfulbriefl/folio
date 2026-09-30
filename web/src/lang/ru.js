@@ -226,7 +226,6 @@ export default {
   'set.recentMax': 'Недавних файлов в списке', 'set.hotkeyQuickNote': 'Быстрая заметка', 'set.hotkeyShow': 'Показать Folio', 'set.global': 'работает в любой программе',
   'set.quickNotesFile': 'Файл заметок', 'set.browse': 'Выбрать…',
   'set.smoothTheme': 'Плавная смена темы', 'set.animations': 'Анимации', 'set.animations.h': 'Перелистывание, появление панелей',
-  'set.backdrop': 'Эффект Mica', 'set.backdrop.h': 'Прозрачное окно для «Стекла», Windows 11',
   'set.themeLight': 'Светлая тема', 'set.themeDark': 'Тёмная тема',
   'set.fontUi': 'Интерфейс', 'set.fontText': 'Текст', 'set.fontMono': 'Код', 'set.fontRead': 'Чтение', 'set.embedded': 'Встроенные', 'set.system': 'Установленные в Windows',
   'set.fontSize': 'Размер текста', 'set.lineHeight': 'Межстрочный интервал', 'set.sheetWidth': 'Ширина листа', 'set.codeFontSize': 'Размер кода', 'set.uiScale': 'Масштаб интерфейса',

@@ -25,6 +25,9 @@ function score(q, s) {
   return sc;
 }
 
+// folders only count as a plain substring: fuzzy matching over a long path finds almost anything
+const inPath = (q, p) => (q && p && p.toLowerCase().includes(q) ? 30 : 0);
+
 function items(query) {
   const q = query.trim();
   if (q.startsWith(':')) {
@@ -52,12 +55,12 @@ function items(query) {
   if (!onlyCmds) {
     for (const tab of docs.tabs) {
       const name = tabName(tab);
-      const s = score(qq, name + ' ' + (tab.path || ''));
+      const s = Math.max(score(qq, name), inPath(qq, tab.path));
       if (s > 0 && qq) out.push({ group: t('pal.tabs'), icon: 'file-text', label: name, note: tab.path ? shortPath(dirname(tab.path), 40) : '', s: s + 20, run: () => activateTab(tab) });
     }
     for (const r of docs.recent) {
       if (docs.tabs.some(x => x.path && x.path.toLowerCase() === r.path.toLowerCase())) continue;
-      const s = score(qq, basename(r.path) + ' ' + r.path);
+      const s = Math.max(score(qq, basename(r.path)), inPath(qq, r.path));
       if (s > 0) out.push({ group: t('pal.recent'), icon: 'history', label: basename(r.path), note: shortPath(dirname(r.path), 40), s: qq ? s + 10 : 0.5, run: () => openPaths([r.path]) });
     }
   }

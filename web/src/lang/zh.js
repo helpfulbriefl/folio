@@ -208,7 +208,6 @@ export default {
   'set.recentMax': '最近文件数量', 'set.hotkeyQuickNote': '快速笔记', 'set.hotkeyShow': '显示 Folio', 'set.global': '在任何程序中都可用',
   'set.quickNotesFile': '笔记文件', 'set.browse': '浏览…',
   'set.smoothTheme': '平滑切换主题', 'set.animations': '动画', 'set.animations.h': '翻页、面板滑入',
-  'set.backdrop': 'Mica 效果', 'set.backdrop.h': '“玻璃”主题下的半透明窗口（Windows 11）',
   'set.themeLight': '浅色主题', 'set.themeDark': '深色主题',
   'set.fontUi': '界面', 'set.fontText': '文本', 'set.fontMono': '代码', 'set.fontRead': '阅读', 'set.embedded': '内置', 'set.system': 'Windows 已安装',
   'set.fontSize': '文本大小', 'set.lineHeight': '行距', 'set.sheetWidth': '页面宽度', 'set.codeFontSize': '代码大小', 'set.uiScale': '界面缩放',

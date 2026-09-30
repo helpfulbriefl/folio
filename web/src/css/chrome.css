@@ -1,6 +1,5 @@
 /* Folio — window layout: title bar, tabs, toolbar, banners, status bar */
 #app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--wall);color:var(--text);overflow:hidden}
-html.backdrop #app{background:transparent}
 
 /* top resize strips (the host draws the other borders) */
 .resize-top{position:fixed;z-index:95;top:0;left:10px;right:10px;height:5px;cursor:ns-resize}
@@ -12,9 +11,11 @@ html.maximized .resize-top,html.fullscreen .resize-top{display:none}
 .chrome{flex:none;background:var(--chrome);border-bottom:1px solid var(--line);position:relative;z-index:5}
 .titlebar{height:var(--title-h);display:flex;align-items:stretch;padding-left:14px;min-width:0}
 .brand{display:flex;align-items:center;gap:9px;font-weight:650;font-size:14.5px;letter-spacing:-.015em;padding-right:14px;flex:none;transition:color .2s}
-.tabs{display:flex;align-items:stretch;gap:2px;min-width:0;flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.tabs{display:flex;align-items:stretch;gap:2px;min-width:0;flex:0 1 auto;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
-.tab{position:relative;display:flex;align-items:center;gap:7px;padding:0 8px 0 11px;color:var(--muted);font-weight:500;font-size:13px;white-space:nowrap;transition:color .15s;flex:none;max-width:240px}
+.tab{position:relative;display:flex;align-items:center;gap:7px;padding:0 8px 0 11px;color:var(--muted);font-weight:500;font-size:13px;white-space:nowrap;transition:color .15s;flex:0 1 auto;min-width:124px;max-width:224px}
+.tab.on{flex-shrink:0}
+.tab>svg{flex:none}
 .tab .nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .tab .i{opacity:.85}
 .tab:hover{color:var(--text-2)}
@@ -26,9 +27,12 @@ html.maximized .resize-top,html.fullscreen .resize-top{display:none}
 .tab .dirty{width:7px;height:7px;border-radius:50%;background:var(--coral);margin-left:-1px;flex:none}
 .tab .dirty+.x{margin-left:-2px}
 .tab.dragging{z-index:3;transition:none;color:var(--text);background:var(--hover);border-radius:8px 8px 0 0}
-.tab-add{align-self:center;display:grid;place-items:center;width:30px;height:28px;border-radius:7px;color:var(--muted);flex:none}
+.tab-add{align-self:center;display:grid;place-items:center;width:30px;height:28px;margin-left:4px;border-radius:7px;color:var(--muted);flex:none}
 .tab-add:hover{background:var(--hover);color:var(--text)}
-.tabs>.drag{min-width:24px}
+.tabs.fade-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px);mask-image:linear-gradient(90deg,transparent,#000 28px)}
+.tabs.fade-r{-webkit-mask-image:linear-gradient(270deg,transparent,#000 28px);mask-image:linear-gradient(270deg,transparent,#000 28px)}
+.tabs.fade-l.fade-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent)}
+.tb-gap{flex:1 0 44px}
 .tb-right{display:flex;align-items:center;gap:2px;margin-left:8px;flex:none}
 .winctl{display:flex;height:var(--title-h);margin-left:10px;align-self:flex-start}
 .winctl span{width:46px;display:grid;place-items:center;color:var(--text-2);transition:background .1s}

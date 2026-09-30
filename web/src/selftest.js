@@ -3,7 +3,7 @@
 import { $, $$, sleep } from './util.js';
 import { host } from './host.js';
 import { settings } from './settings.js';
-import { t } from './i18n.js';
+import { t, lang } from './i18n.js';
 import { run } from './commands.js';
 import { docs, openPaths, isDirty } from './docs.js';
 import { editor } from './editor/editor.js';
@@ -189,7 +189,7 @@ export async function runSelfTest(init) {
     openPalette('');
     await sleep(200);
     const inp = $('.pal input');
-    if (inp) { inp.value = 'со'; inp.dispatchEvent(new Event('input')); }
+    if (inp) { inp.value = { ru: 'сохр', zh: '保存' }[lang()] || 'save'; inp.dispatchEvent(new Event('input')); }
     await shot('11-palette', 400);
     closePalette();
   });

@@ -24,6 +24,8 @@ export function buildChrome(root) {
       <div class="titlebar drag">
         <div class="brand drag">${LOGO()}<span>Folio</span></div>
         <nav class="tabs drag" id="tabs"></nav>
+        <button class="tab-add" data-act="new">${I('plus', 'sm')}</button>
+        <div class="tb-gap drag"></div>
         <div class="tb-right">
           <button class="icon-btn" data-act="theme" data-tip="theme"></button>
           <button class="icon-btn" data-act="settings" data-tip="settings">${I('settings')}</button>
@@ -96,6 +98,7 @@ function wireTitlebar(root) {
     if (a === 'theme') run('view.themeToggle');
     else if (a === 'settings') run('app.settings');
     else if (a === 'pin') run('view.topmost');
+    else if (a === 'new') run('file.new');
   });
   const tabs = $('#tabs');
   on(tabs, 'mousedown', '.tab', (e, b) => {
@@ -107,13 +110,14 @@ function wireTitlebar(root) {
     startTabDrag(e, b, tab);
   });
   on(tabs, 'click', '.tab .x', (e, x) => { e.stopPropagation(); const tab = docs.tabs.find(t2 => t2.id === x.closest('.tab').dataset.id); if (tab) closeTab(tab); });
-  on(tabs, 'click', '.tab-add', () => run('file.new'));
   on(tabs, 'contextmenu', '.tab', (e, b) => {
     e.preventDefault();
     const tab = docs.tabs.find(x => x.id === b.dataset.id);
     if (tab) openMenu(tabMenu(tab), { x: e.clientX, y: e.clientY });
   });
   tabs.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { tabs.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+  tabs.addEventListener('scroll', tabFades, { passive: true });
+  window.addEventListener('resize', throttle(tabFades, 100));
 }
 
 function startTabDrag(e, node, tab) {
@@ -148,9 +152,21 @@ export function renderTabs() {
     const title = tab.path ? tab.path : tabName(tab);
     return `<button class="tab ${on ? 'on' : ''}" data-id="${tab.id}" title="${esc(title)}">${I(tabIcon(tab), 'sm')}<span class="nm">${esc(tabName(tab))}</span>${dirty ? '<i class="dirty"></i>' : ''}<span class="x" title="${esc(t('tab.close'))}">${I('x', 'xs')}</span></button>`;
   }).join('');
-  strip.innerHTML = html + `<button class="tab-add" title="${esc(t('menu.new'))} (Ctrl+N)">${I('plus', 'sm')}</button><div class="drag grow"></div>`;
+  strip.innerHTML = html;
+  const add = $('.titlebar .tab-add');
+  if (add) add.title = t('menu.new') + ' (Ctrl+N)';
   const act = strip.querySelector('.tab.on');
   act?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  tabFades();
+}
+
+// soft edges when some tabs are scrolled out of view
+function tabFades() {
+  const s = $('#tabs');
+  if (!s) return;
+  const max = s.scrollWidth - s.clientWidth;
+  s.classList.toggle('fade-l', s.scrollLeft > 2);
+  s.classList.toggle('fade-r', max - s.scrollLeft > 2);
 }
 
 function renderTabsDirty() {
