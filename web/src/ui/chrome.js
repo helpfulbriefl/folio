@@ -75,12 +75,17 @@ export function buildChrome(root) {
 function wireTitlebar(root) {
   const tb = $('.titlebar', root);
   // With WebView2 drag regions (CSS app-region) Windows moves the window itself; this is the fallback for old runtimes.
+  let last = { t: -1e9, x: 0, y: 0 };
   tb.addEventListener('mousedown', e => {
     if (e.button !== 0 || APP.sys?.nativeDrag) return;
     if (e.target.closest('.tab, .tab-add, .tb-right, button')) return;
     if (!e.target.closest('.drag')) return;
-    if (e.detail === 2) { host.send('win.maximize'); return; }
-    host.send('win.drag');
+    // the host takes the mouse for the drag, so Chromium may not count the second click: check it here
+    const now = performance.now();
+    const dbl = e.detail === 2 || (now - last.t <= (APP.sys?.dblclickMs || 500) && Math.abs(e.screenX - last.x) <= 4 && Math.abs(e.screenY - last.y) <= 4);
+    last = dbl ? { t: -1e9, x: 0, y: 0 } : { t: now, x: e.screenX, y: e.screenY };
+    if (dbl) { host.send('win.maximize', { why: 'dblclick' }); return; }
+    host.send('win.drag', { detail: e.detail });
   });
   tb.addEventListener('contextmenu', e => {
     if (e.target.closest('.tab')) return;

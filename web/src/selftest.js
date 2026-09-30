@@ -57,6 +57,9 @@ export async function runSelfTest(init) {
   settings.set('animations', false);
   settings.set('updates.auto', false);
   settings.set('theme', 'paper');
+  // the sample documents are Russian, so the screenshots use the Russian interface
+  settings.set('lang', init?.flags?.selftestLang || 'ru');
+  await sleep(150);
   const paths = {};
 
   await step('samples', async () => {

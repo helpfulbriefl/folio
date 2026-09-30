@@ -125,7 +125,9 @@ internal sealed class SelfTest
             await DragAsync(pt, 140, 70);
             await Task.Delay(500);
             int dx = w.Location.X - before.X, dy = w.Location.Y - before.Y;
-            Check("host.drag", Math.Abs(dx - 140) <= 20 && Math.Abs(dy - 70) <= 20, $"moved by {dx},{dy}; native regions: {w.NativeDrag}");
+            Check("host.drag", Math.Abs(dx - 140) <= 20 && Math.Abs(dy - 70) <= 20, $"moved by {dx},{dy}");
+            w.Location = before;
+            await Task.Delay(400);
 
             // 2) double click maximizes, the second one restores
             var p2 = await TitlebarPointAsync(w) ?? pt;

@@ -51,11 +51,17 @@ internal sealed partial class MainForm
                 return true;
 
             // ---------------------------------------------------------------- window
-            case "win.drag": StartDrag(); return true;
+            case "win.drag":
+                if (_app.SelfTestMode) Log.Info($"self-test: win.drag (button down: {Native.LeftButtonDown()}, clicks: {N(p, "detail", 0)})");
+                StartDrag();
+                return true;
             case "win.resize": StartResize(S(p, "edge")); return true;
             case "win.sysmenu": ShowSystemMenu(); return true;
             case "win.minimize": WindowState = FormWindowState.Minimized; return true;
-            case "win.maximize": ToggleMaximize(); return true;
+            case "win.maximize":
+                if (_app.SelfTestMode) Log.Info($"self-test: win.maximize ({S(p, "why") ?? "button"})");
+                ToggleMaximize();
+                return true;
             case "win.fullscreen": SetFullscreen(B(p, "on")); return true;
             case "win.topmost": TopMost = B(p, "on"); SendState(); return true;
             case "win.hide":

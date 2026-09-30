@@ -18,6 +18,18 @@
 - **Языки интерфейса:** русский, English, 中文 — и свои переводы (*Настройки → Дополнительно → Шаблон перевода*).
 - **Палитра команд** <kbd>Ctrl</kbd>+<kbd>K</kbd>, все сочетания клавиш настраиваются, журнал событий (*Справка → Журнал*), проверка обновлений с GitHub с проверкой SHA-256.
 
+<a id="screenshots"></a>
+## Скриншоты
+
+| | |
+| --- | --- |
+| ![Читалка: диалог с ChatGPT книжной страницей](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-reader.png) | ![Старое письмо в Windows-1251 и меню кодировок](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-encodings.png) |
+| Читалка: длинный диалог с ChatGPT как книга | Кодировки: как файл выглядит в каждой из них |
+| ![Режим «Кодер» в теме «Графит»](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-dark.png) | ![Тема «Стекло» и живой Markdown](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-glass.png) |
+| «Кодер» в тёмной теме «Графит» | Тема «Стекло» и живой Markdown |
+
+Скриншоты снимает сам Folio во время самопроверки в CI (`Folio.exe --selftest`) на чистой Windows — это настоящая программа, а не макет.
+
 ## Установка
 
 1. Скачайте [Folio.exe](https://github.com/helpfulbriefl/folio/releases/latest/download/Folio.exe) и положите куда удобно (например, в `C:\Users\<вы>\Apps\Folio`).

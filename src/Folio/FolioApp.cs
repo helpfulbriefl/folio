@@ -238,7 +238,7 @@ internal sealed class FolioApp : ApplicationContext
             ["locale"] = CultureInfo.CurrentUICulture.Name,
             ["sys"] = new JsonObject
             {
-                ["os"] = OsName(), ["build"] = Native.OsBuild, ["win11"] = Native.OsBuild >= 22000, ["portable"] = AppPaths.Portable,
+                ["os"] = OsName(), ["build"] = Native.OsBuild, ["win11"] = Native.OsBuild >= 22000, ["portable"] = AppPaths.Portable, ["dblclickMs"] = (int)Native.GetDoubleClickTime(),
                 ["dataDir"] = AppPaths.Roaming, ["notesDir"] = AppPaths.DefaultNotesDir, ["webview"] = WebViewVersion,
                 ["arch"] = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant(), ["primary"] = w.IsPrimary, ["mock"] = false,
                 ["nativeDrag"] = w.NativeDrag, ["hotkeyFailed"] = failed, ["selftestAi"] = SelfTest?.AiBaseUrl,

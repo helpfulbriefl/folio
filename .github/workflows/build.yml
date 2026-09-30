@@ -15,8 +15,8 @@ permissions:
   contents: write
 
 env:
-  # self-test screenshot that is published as folio.png (used by README)
-  README_SHOT: 05-proof
+  # self-test screenshots that are attached to the release under these names (README shows them)
+  README_SHOTS: 06-ai-diff=folio.png 07-reader-book=folio-reader.png 03-encoding-menu=folio-encodings.png 04-coder-graphite=folio-dark.png 10-glass=folio-glass.png
 
 concurrency:
   group: build-${{ github.ref }}
@@ -108,7 +108,10 @@ jobs:
           $notes += "`n`n**Download:** Folio.exe (Windows 10/11 x64, one file, no installer). SHA-256: see SHA256SUMS.txt."
           [IO.File]::WriteAllText("$PWD\notes.md", $notes)
           $assets = @('out\Folio.exe', 'SHA256SUMS.txt')
-          if (Test-Path "selftest\$env:README_SHOT.png") { Copy-Item "selftest\$env:README_SHOT.png" folio.png; $assets += 'folio.png' }
+          foreach ($pair in $env:README_SHOTS -split ' ') {
+            $src, $dst = $pair -split '='
+            if (Test-Path "selftest\$src.png") { Copy-Item "selftest\$src.png" $dst; $assets += $dst }
+          }
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag @assets --clobber
