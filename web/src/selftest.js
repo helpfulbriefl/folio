@@ -127,9 +127,13 @@ export async function runSelfTest(init) {
     settings.set('theme', 'paper');
     await openPaths([paths['Черновик статьи.txt']]);
     setMode('proof');
-    const ok = await until(() => issuesOf(editor.view.state).length > 0, 8000, 200);
-    const n = issuesOf(editor.view.state).length;
-    check('proof.issues', ok, n + ' issues: ' + issuesOf(editor.view.state).slice(0, 8).map(i => i.word || i.msg).join(', '));
+    const t0 = performance.now();
+    const ok = await until(() => issuesOf(editor.view.state).length > 0, 10000, 200);
+    const tIssues = Math.round(performance.now() - t0);
+    // spelling comes from the Windows spell checker and may take longer on a cold start: wait for it, but only report it
+    await until(() => issuesOf(editor.view.state).some(i => i.kind === 'spell'), 20000, 250);
+    const all = issuesOf(editor.view.state), sp = all.filter(i => i.kind === 'spell');
+    check('proof.issues', ok, `${all.length} issues in ${tIssues} ms; spelling ${sp.length} in ${Math.round(performance.now() - t0)} ms: ` + all.slice(0, 8).map(i => i.word || i.msg).join(', '));
     check('proof.panel', !!$('#side .proof-panel'));
     await shot('05-proof', 600);
   });

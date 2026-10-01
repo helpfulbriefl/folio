@@ -75,6 +75,23 @@ internal sealed class SpellService : IDisposable
             Log.Info("Spell checkers: " + (_langs.Count > 0 ? string.Join(", ", _langs) : "none"));
         }
         catch (Exception ex) { Log.Warn("Spell checking is not available: " + ex.Message); }
+        // Warm up the usual checkers while the window starts: creating one loads its dictionary, which can take
+        // seconds on a cold start, and the first proofreading then had to wait for it.
+        if (_factory != null)
+        {
+            foreach (var l in new[] { System.Globalization.CultureInfo.CurrentUICulture.Name, "ru-RU", "en-US" }.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (_queue.Count > 0) break; // real requests first
+                try
+                {
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    var c = CheckerFor(l);
+                    c?.Check("warm");
+                    if (c != null) Log.Info($"Spell checker {l} ready in {sw.ElapsedMilliseconds} ms");
+                }
+                catch (Exception ex) { Log.Warn($"spell warm-up {l}: {ex.Message}"); }
+            }
+        }
         foreach (var a in _queue.GetConsumingEnumerable())
         {
             try { a(); } catch (Exception ex) { Log.Warn("spell: " + ex.Message); }
@@ -128,6 +145,7 @@ internal sealed class SpellService : IDisposable
     public Task<(Dictionary<string, List<string>> bad, bool missing)> CheckWordsAsync(string lang, IReadOnlyList<string> words) => Run(() =>
     {
         var bad = new Dictionary<string, List<string>>();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var c = CheckerFor(lang);
         if (c == null) return (bad, true);
         foreach (var w in words.Distinct())
@@ -141,6 +159,7 @@ internal sealed class SpellService : IDisposable
             try { foreach (var s in Drain(c.Suggest(w))) { if (!list.Contains(s)) list.Add(s); if (list.Count >= 6) break; } } catch { }
             bad[w] = list;
         }
+        if (sw.ElapsedMilliseconds > 1500) Log.Info($"spell {lang}: {words.Count} words in {sw.ElapsedMilliseconds} ms");
         return (bad, false);
     });
 

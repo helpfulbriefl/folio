@@ -76,7 +76,7 @@ export function createMockHost(emit) {
       version: '1.0.0', settings: store('settings'), recent: store('recent') || SAMPLES.slice(0, 4).map((s, i) => ({ path: s.path, encoding: s.encoding, time: now - i * 86400e3, pinned: i === 0 })),
       session: url.has('fresh') ? null : store('session'), args: url.has('open') ? SAMPLES.map(s => s.path) : [], locale: url.get('lang') || navigator.language,
       sys: { os: 'Browser preview', build: 22631, win11: true, portable: false, dataDir: 'C:\\Users\\Demo\\AppData\\Roaming\\Folio', notesDir: 'C:\\Users\\Demo\\Documents\\Folio', webview: navigator.userAgent.match(/Chrome\/([\d.]+)/)?.[1] || '', arch: 'x64', primary: true, mock: true },
-      spell: { langs: ['en-US', 'ru-RU'] }, flags: { firstRun: !store('settings'), selftest: url.has('selftest') }, langs: [], hasAiKey: !!store('aikey'),
+      spell: { langs: ['en-US', 'ru-RU'] }, flags: { firstRun: !store('settings'), selftest: url.has('selftest'), selftestLang: url.get('selftest') || undefined }, langs: [], hasAiKey: !!store('aikey'),
     }),
     'app.ready': () => true, 'app.exit': () => { logs.push({ t: new Date().toISOString(), level: 'info', msg: 'exit' }); return true; },
     'app.newWindow': () => { window.open(location.href.split('?')[0] + '?fresh', '_blank'); return true; }, 'app.restart': () => { location.reload(); return true; },

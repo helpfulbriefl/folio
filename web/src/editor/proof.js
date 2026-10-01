@@ -97,7 +97,12 @@ function scriptOf(w) {
   return null;
 }
 
-async function analyze(view, lang) {
+const SPELL_TIMEOUT = 15000;
+const withTimeout = (pr, ms) => Promise.race([pr, new Promise(r => setTimeout(() => r(TIMED_OUT), ms))]);
+const TIMED_OUT = Symbol('timeout');
+
+/** Finds the issues. onPartial gets punctuation (and already known words) right away, before the Windows spell checker answers. */
+async function analyze(view, lang, onPartial) {
   const state = view.state;
   const doc = state.doc;
   const big = doc.length > 400000;
@@ -141,18 +146,27 @@ async function analyze(view, lang) {
       words.push({ w, from, lang: sc });
     }
   }
+  const punct = [];
+  if (settings.get('punctuation') !== false) punctuation(doc, ranges, punct);
+  const spelled = () => words.flatMap(x => {
+    const s = spellCache.get(x.lang + ':' + x.w);
+    return s ? [{ kind: 'spell', from: x.from, to: x.from + x.w.length, word: x.w, sugg: s.slice(0, 6), msg: t('proof.spelling') }] : [];
+  });
   // ask the host about words we have not seen yet
   const need = new Map();
   for (const x of words) {
     const key = x.lang + ':' + x.w;
     if (!spellCache.has(key)) { if (!need.has(x.lang)) need.set(x.lang, new Set()); need.get(x.lang).add(x.w); }
   }
+  // punctuation does not need the spell checker: show it at once
+  if (need.size && onPartial) onPartial(finish([...issues, ...punct, ...spelled()]));
   for (const [l, set] of need) {
     const list = [...set];
     for (let i = 0; i < list.length; i += 400) {
       const chunk = list.slice(i, i + 400);
       try {
-        const r = await host.call('spell.words', { lang: l, words: chunk });
+        const r = await withTimeout(host.call('spell.words', { lang: l, words: chunk }), SPELL_TIMEOUT);
+        if (r === TIMED_OUT) { console.warn('spell: no answer for ' + l + ' in ' + SPELL_TIMEOUT + ' ms'); continue; } // not cached: asked again next time
         if (r.missing) { missingLangs.add(l); chunk.forEach(w => spellCache.set(l + ':' + w, null)); continue; }
         missingLangs.delete(l);
         for (const w of chunk) spellCache.set(l + ':' + w, r.bad?.[w] ? r.bad[w] : null);
@@ -162,16 +176,15 @@ async function analyze(view, lang) {
       }
     }
   }
-  for (const x of words) {
-    const s = spellCache.get(x.lang + ':' + x.w);
-    if (s) issues.push({ kind: 'spell', from: x.from, to: x.from + x.w.length, word: x.w, sugg: s.slice(0, 6), msg: t('proof.spelling') });
-  }
-  if (settings.get('punctuation') !== false) punctuation(doc, ranges, issues);
-  issues.sort((a, b) => a.from - b.from || a.to - b.to);
-  // drop overlaps
+  return finish([...issues, ...spelled(), ...punct]);
+}
+
+/** Sorts the issues and drops overlapping ones. */
+function finish(list) {
+  list.sort((a, b) => a.from - b.from || a.to - b.to);
   const clean = [];
   let end = -1;
-  for (const i of issues) { if (i.from >= end) { clean.push(i); end = i.to; } }
+  for (const i of list) { if (i.from >= end) { clean.push(i); end = i.to; } }
   return clean;
 }
 
@@ -235,13 +248,14 @@ export function proofPlugin(getLang) {
       const gen = ++this.gen;
       const view = this.view;
       const docAt = view.state.doc;
+      const fresh = () => gen === this.gen && view.state.doc === docAt && !this.dead;
+      const show = issues => { view.dispatch({ effects: setIssues.of({ issues, set: makeSet(issues) }) }); bus.emit('proof.issues', issues); };
       let issues;
-      try { issues = await analyze(view, getLang()); } catch (e) { console.warn(e); return; }
-      if (gen !== this.gen || view.state.doc !== docAt) return; // stale
-      view.dispatch({ effects: setIssues.of({ issues, set: makeSet(issues) }) });
-      bus.emit('proof.issues', issues);
+      try { issues = await analyze(view, getLang(), part => { if (fresh()) show(part); }); } catch (e) { console.warn(e); return; }
+      if (!fresh()) return; // stale
+      show(issues);
     }
-    destroy() { this.run.cancel(); this.gen++; }
+    destroy() { this.run.cancel(); this.gen++; this.dead = true; }
   });
 }
 
