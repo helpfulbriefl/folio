@@ -12,6 +12,8 @@ public static class JsonStore
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        // without a resolver, JsonNode trees with values added through the generic JsonArray.Add<T> cannot be written
+        TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver(),
     };
 
     public static JsonNode? LoadNode(string path)

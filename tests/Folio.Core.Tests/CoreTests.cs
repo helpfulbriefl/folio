@@ -238,3 +238,19 @@ public class MiscTests
         Assert.Equal("Invalid API key", e.Message);
     }
 }
+
+public class JsonStoreTests
+{
+    // 1.0.0 lost its app.init reply when a value had been added with the generic JsonArray.Add<T>
+    // (the options had no TypeInfoResolver): the window stayed white. The shared options must write such trees.
+    [Fact]
+    public void WritesValuesAddedThroughGenericAdd()
+    {
+        var a = new System.Text.Json.Nodes.JsonArray();
+        a.Add("Win+Alt+F");
+        var o = new System.Text.Json.Nodes.JsonObject { ["hotkeyFailed"] = a, ["list"] = new System.Text.Json.Nodes.JsonArray { "x", 2 } };
+        var json = o.ToJsonString(JsonStore.Options);
+        Assert.Contains("Win+Alt+F", json);
+        Assert.Contains("\"x\"", json);
+    }
+}

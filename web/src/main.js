@@ -77,9 +77,13 @@ async function boot() {
   } else if (settings.get('updates.auto') !== false && !init.sys?.mock) {
     setTimeout(() => checkUpdates(), 6000);
   }
+  if (init.flags?.compatAuto && app.primary) {
+    const { toast } = await import('./ui/dialogs.js');
+    toast(t('compat.auto'), { icon: 'info', ms: 11000 });
+  }
   if (!init.flags?.selftest && app.primary && init.sys?.hotkeyFailed?.length) {
     const { toast } = await import('./ui/dialogs.js');
-    toast(t('hk.failed', { keys: init.sys.hotkeyFailed.join(', ') }), { icon: 'keyboard', kind: 'err', ms: 7000 });
+    setTimeout(() => toast(t('hk.failed', { keys: init.sys.hotkeyFailed.join(', ') }), { icon: 'keyboard', kind: 'err', ms: 7000 }), init.flags?.compatAuto ? 11500 : 0);
   }
 }
 

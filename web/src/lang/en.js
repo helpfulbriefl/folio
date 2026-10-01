@@ -237,10 +237,8 @@ export default {
   'splash.loading': 'Starting Folio…',
   'splash.slow': 'Starting takes longer than usual…',
   'splash.failed': 'The Folio interface did not start.',
-  'splash.blank': 'The Folio window stays empty: its picture does not reach the screen.',
   'splash.compat': 'Restart in compatibility mode',
   'splash.restart': 'Restart Folio',
-  'splash.continue': 'Continue',
   'splash.logs': 'Open the log folder',
   'splash.quit': 'Quit',
   'set.renderH': 'Display',
@@ -248,4 +246,5 @@ export default {
   'set.compatMode.h': 'No hardware graphics acceleration. Helps when the window stays white or empty',
   'set.compatMode.restart': 'The change takes effect after a restart',
   'set.restartNow': 'Restart',
+  'compat.auto': 'Folio restarted in compatibility mode (no hardware graphics acceleration): with the normal start the window did not show the interface. Turn it off in Settings → Advanced.',
 };

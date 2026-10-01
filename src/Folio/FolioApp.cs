@@ -223,11 +223,12 @@ internal sealed class FolioApp : ApplicationContext
     }
 
     /// <summary>The interface did not start: remember the compatibility mode and start Folio again.</summary>
-    public void RestartCompat()
+    /// <param name="auto">Folio decided itself (empty window, stopped page process): the UI tells the user after the restart.</param>
+    public void RestartCompat(bool auto = false)
     {
         WriteCompatFlag();
-        Log.Warn("Restarting in compatibility mode (no GPU acceleration)");
-        Restart("--compat"); // also on the command line: a flag file that could not be written must not lead to a restart loop
+        Log.Warn("Restarting in compatibility mode (no GPU acceleration)" + (auto ? ", automatically" : ""));
+        Restart(auto ? "--compat=auto" : "--compat"); // also on the command line: a flag file that could not be written must not lead to a restart loop
     }
 
     static void WriteCompatFlag()
@@ -251,7 +252,7 @@ internal sealed class FolioApp : ApplicationContext
         }
         var recent = JsonStore.LoadNode(AppPaths.Recent) as JsonArray;
         var failed = new JsonArray();
-        if (w.IsPrimary && !_hotkeyWarned) { _hotkeyWarned = true; foreach (var k in _hotkeyFailed) failed.Add(k); }
+        if (w.IsPrimary && !_hotkeyWarned) { _hotkeyWarned = true; foreach (var k in _hotkeyFailed) failed.Add((JsonNode?)JsonValue.Create(k)); } // not Add<string>: see MainForm.Wire
         return new JsonObject
         {
             ["version"] = UpdateChecker.CurrentVersion,
@@ -269,7 +270,7 @@ internal sealed class FolioApp : ApplicationContext
                 ["exe"] = Environment.ProcessPath, ["dotnet"] = Environment.Version.ToString(),
             },
             ["spell"] = new JsonObject { ["langs"] = new JsonArray(langs.Select(l => (JsonNode)l).ToArray()) },
-            ["flags"] = new JsonObject { ["firstRun"] = firstRun, ["selftest"] = SelfTestMode },
+            ["flags"] = new JsonObject { ["firstRun"] = firstRun, ["selftest"] = SelfTestMode, ["compatAuto"] = Options.CompatAuto },
             ["langs"] = CustomLanguages(),
             ["hasAiKey"] = !string.IsNullOrEmpty(Secrets.Get(SettingString("ai.provider") ?? "openai")),
         };

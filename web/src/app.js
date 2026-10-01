@@ -229,7 +229,7 @@ const NATIVE_KEYS = ['tray.show', 'tray.quickNote', 'tray.newNote', 'tray.newWin
   'qn.title', 'qn.placeholder', 'qn.hint', 'qn.save', 'qn.saved', 'qn.open', 'qn.pin', 'qn.close', 'qn.defaultFile', 'qn.error', 'hk.failed', 'upd.installing',
   'dlg.filterText', 'dlg.filterAll', 'dlg.filterSupported', 'dlg.filterJson',
   'win.minimize', 'win.maximize', 'win.restore', 'win.close',
-  'splash.loading', 'splash.slow', 'splash.failed', 'splash.blank', 'splash.compat', 'splash.restart', 'splash.continue', 'splash.logs', 'splash.quit'];
+  'splash.loading', 'splash.slow', 'splash.failed', 'splash.compat', 'splash.restart', 'splash.logs', 'splash.quit'];
 
 export function sendNativeStrings() {
   host.send('app.strings', { lang: lang(), strings: Object.fromEntries(NATIVE_KEYS.map(k => [k, t(k)])) });

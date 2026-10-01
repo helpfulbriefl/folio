@@ -237,10 +237,8 @@ export default {
   'splash.loading': '正在启动 Folio…',
   'splash.slow': '启动时间比平时长…',
   'splash.failed': 'Folio 界面未能启动。',
-  'splash.blank': 'Folio 窗口一直是空白的：画面没有显示到屏幕上。',
   'splash.compat': '以兼容模式重新启动',
   'splash.restart': '重新启动 Folio',
-  'splash.continue': '继续',
   'splash.logs': '打开日志文件夹',
   'splash.quit': '退出',
   'set.renderH': '显示',
@@ -248,4 +246,5 @@ export default {
   'set.compatMode.h': '不使用硬件图形加速。窗口一直白屏或空白时可以尝试',
   'set.compatMode.restart': '重新启动后生效',
   'set.restartNow': '重新启动',
+  'compat.auto': 'Folio 已以兼容模式重新启动（不使用硬件图形加速）：正常启动时窗口没有显示界面。可在“设置 → 高级”中关闭。',
 };

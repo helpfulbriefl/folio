@@ -445,7 +445,7 @@ internal sealed partial class MainForm : Form
             // STATUS_INVALID_IMAGE_HASH: another program (usually an antivirus) puts an unsigned DLL into the page process
             Log.Warn("The page process was stopped by the code integrity check: restarting in compatibility mode");
             WebReady = false; // the page is gone: quit without asking it
-            _app.RestartCompat();
+            _app.RestartCompat(auto: true);
             return;
         }
         if (++_crashes <= 3)
@@ -517,7 +517,7 @@ internal sealed partial class MainForm : Form
     }
 
     /// <summary>The page could not start: say so instead of leaving an empty window, and offer a way out.</summary>
-    void StartupFailed(string text, string? issue = null, bool canContinue = false)
+    void StartupFailed(string text, string? issue = null)
     {
         if (IsDisposed) return;
         if (_startup is { Failed: true }) return;
@@ -531,7 +531,6 @@ internal sealed partial class MainForm : Form
         _startup.BringToFront();
         var detail = issues + $"\nWebView2 {_app.WebViewVersion}" + (_app.CompatMode ? " · compatibility mode" : "") + "\n" + Log.Directory;
         var actions = new List<(string, Action)>();
-        if (canContinue) actions.Add((_app.Str("splash.continue", "Continue"), () => HideStartup()));
         if (!_app.CompatMode) actions.Add((_app.Str("splash.compat", "Restart in compatibility mode"), () => _app.RestartCompat()));
         else actions.Add((_app.Str("splash.restart", "Restart Folio"), () => _app.Restart()));
         actions.Add((_app.Str("splash.logs", "Open the log folder"), () => OpenFolder(Log.Directory)));
@@ -579,7 +578,7 @@ internal sealed partial class MainForm : Form
 
     void SchedulePaintCheck()
     {
-        if (_paintChecked || _paintTimer != null || _app.SelfTestMode) return;
+        if (_paintChecked || _paintTimer != null || _app.SelfTestMode || _app.CompatMode) return; // in compatibility mode there is nothing more to switch
         _paintTimer = new System.Windows.Forms.Timer { Interval = 1500 };
         _paintTimer.Tick += (s, e) => PaintCheck();
         _paintTimer.Start();
@@ -605,8 +604,7 @@ internal sealed partial class MainForm : Form
         if (++_paintBlank < 3) return; // three looks in a row (4.5 s): not a moment of a theme change
         StopPaintCheck();
         Log.Error($"The window stays empty although the interface started ({colours} colour(s) on screen): its picture does not reach the screen");
-        if (!_app.CompatMode) { _app.RestartCompat(); return; }
-        StartupFailed(_app.Str("splash.blank", "The Folio window stays empty."), $"The window stays empty although the interface started ({colours} colour(s) on screen)", canContinue: true);
+        _app.RestartCompat(auto: true);
     }
 
     /// <summary>Distinct colours on the screen inside r (every 4th pixel, stops counting above 64); -1 when the screen cannot be read.</summary>
@@ -645,7 +643,7 @@ internal sealed partial class MainForm : Form
     }
 
     // ------------------------------------------------------------------ messages
-    static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver() };
 
     void OnWebMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
@@ -713,12 +711,34 @@ internal sealed partial class MainForm : Form
         _ => ("error", ex.Message),
     };
 
-    static readonly JsonSerializerOptions Wire = new() { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    // The resolver matters: without it a value added with the generic JsonArray.Add<T> cannot be written. In 1.0.0 the
+    // app.init reply carried such a value whenever a global hotkey was taken by another program; the reply was dropped
+    // and the page waited for it forever: a white window where nothing worked.
+    static readonly JsonSerializerOptions Wire = new()
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver(),
+    };
+    bool _postFailLogged;
 
     void Post(JsonObject o)
     {
         if (IsDisposed) return;
-        try { _web.CoreWebView2?.PostWebMessageAsString(o.ToJsonString(Wire)); }
+        string json;
+        try { json = o.ToJsonString(Wire); }
+        catch (Exception ex)
+        {
+            // a reply must never get lost: the page would wait for it forever
+            if (!_postFailLogged)
+            {
+                _postFailLogged = true;
+                var what = o["ev"]?.ToString() ?? (o.ContainsKey("id") ? "reply" : "message");
+                BeginInvoke(() => Log.Error($"A {what} for the page could not be written: {ex.Message}"));
+            }
+            if (o["id"] is not JsonNode id) return;
+            json = new JsonObject { ["id"] = id.DeepClone(), ["ok"] = false, ["err"] = new JsonObject { ["code"] = "error", ["message"] = "The host could not write its reply: " + ex.Message } }.ToJsonString(Wire);
+        }
+        try { _web.CoreWebView2?.PostWebMessageAsString(json); }
         catch { /* window is closing; never log here (log entries are posted too) */ }
     }
 

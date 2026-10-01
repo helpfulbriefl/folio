@@ -6,7 +6,7 @@ namespace Folio;
 internal sealed class StartOptions
 {
     public List<string> Files { get; } = new();
-    public bool NewWindow, Tray, QuickNote, SelfTest, Restarted, DevTools, Fresh, Autostart, Compat;
+    public bool NewWindow, Tray, QuickNote, SelfTest, Restarted, DevTools, Fresh, Autostart, Compat, CompatAuto;
     public string? SelfTestOut;
     public string Cwd = Environment.CurrentDirectory;
 
@@ -33,7 +33,7 @@ internal sealed class StartOptions
                     case "restarted": case "updated": o.Restarted = true; break;
                     case "devtools": o.DevTools = true; break;
                     case "fresh": o.Fresh = true; break;
-                    case "compat": case "safe-mode": o.Compat = true; break;
+                    case "compat": case "safe-mode": o.Compat = true; o.CompatAuto = v == "auto"; break;
                 }
                 continue;
             }
