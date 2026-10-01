@@ -61,6 +61,25 @@ internal static partial class Native
 
     [DllImport("kernel32.dll", SetLastError = true)] public static extern bool GetNamedPipeServerProcessId(IntPtr pipe, out uint pid);
 
+    // windows of another process (Takeover: a newer Folio asks an older one to quit)
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+    public const int ENDSESSION_CLOSEAPP = 1;
+
+    public static List<IntPtr> TopLevelWindows(int pid)
+    {
+        var list = new List<IntPtr>();
+        EnumWindows((h, _) => { GetWindowThreadProcessId(h, out var p); if (p == (uint)pid) list.Add(h); return true; }, IntPtr.Zero);
+        return list;
+    }
+
+    public static string TitleOf(IntPtr h)
+    {
+        var sb = new System.Text.StringBuilder(512);
+        GetWindowText(h, sb, sb.Capacity);
+        return sb.ToString();
+    }
+
     // input injection (used only by the self-test to check window dragging)
     [StructLayout(LayoutKind.Sequential)] public struct MOUSEINPUT { public int dx, dy; public uint mouseData, dwFlags, time; public IntPtr dwExtraInfo; }
     [StructLayout(LayoutKind.Sequential)] public struct INPUT { public uint type; public MOUSEINPUT mi; }  // 40 bytes on x64 (mouse is the largest union member)

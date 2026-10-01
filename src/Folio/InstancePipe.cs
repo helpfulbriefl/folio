@@ -31,6 +31,7 @@ internal sealed class InstancePipe : IDisposable
                     read.CancelAfter(3000);
                     int n;
                     while ((n = await server.ReadAsync(buf, read.Token)) > 0) { ms.Write(buf, 0, n); if (ms.Length > 1 << 20) break; }
+                    if (ms.Length == 0) continue; // a newer Folio only looked who is running (see Takeover)
                     var json = Encoding.UTF8.GetString(ms.ToArray());
                     if (JsonNode.Parse(json) is JsonObject o)
                     {
@@ -42,6 +43,18 @@ internal sealed class InstancePipe : IDisposable
                 catch (Exception ex) { Log.Warn("instance pipe: " + ex.Message); await Task.Delay(300); }
             }
         });
+    }
+
+    /// <summary>Process id of the running Folio (the pipe server); 0 when nobody answers. Sends nothing.</summary>
+    public static int ServerProcessId()
+    {
+        try
+        {
+            using var client = new NamedPipeClientStream(".", Name, PipeDirection.Out, PipeOptions.CurrentUserOnly);
+            client.Connect(1500);
+            return Native.GetNamedPipeServerProcessId(client.SafePipeHandle.DangerousGetHandle(), out var pid) ? (int)pid : 0;
+        }
+        catch { return 0; }
     }
 
     /// <summary>Sends the command line to the running instance. False when nobody answered.</summary>

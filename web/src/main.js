@@ -66,7 +66,7 @@ async function boot() {
   stage('session');
   await restoreSession(app.primary ? init.session : null, init.args || []);
   stage('welcome');
-  if (init.flags?.firstRun && !init.flags?.selftest && app.primary && !(init.args || []).length) openWelcome();
+  if (init.flags?.firstRun && !init.flags?.selftest && app.primary && !(init.args || []).length && !init.session?.tabs?.length) openWelcome();
   if (settings.get('topmost')) host.send('win.topmost', { on: true });
   stage('ready');
   host.send('app.ready', { theme: document.documentElement.dataset.theme });

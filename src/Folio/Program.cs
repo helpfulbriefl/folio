@@ -40,6 +40,17 @@ internal static class Program
             mutex = new Mutex(false, InstancePipe.MutexName);
             try { owned = mutex.WaitOne(o.Restarted ? TimeSpan.FromSeconds(15) : TimeSpan.Zero); }
             catch (AbandonedMutexException) { owned = true; }
+            if (!owned && !o.Restarted)
+            {
+                // Folio is already running. If it is an older version (an update was downloaded while the old one
+                // waits in the tray), the new one replaces it; otherwise the old one would get the command line.
+                var r = Takeover.TryReplaceOlder(o.AsVersion ?? UpdateChecker.CurrentVersion, out var running);
+                if (r == Takeover.Result.Replaced)
+                {
+                    try { owned = mutex.WaitOne(TimeSpan.FromSeconds(10)); } catch (AbandonedMutexException) { owned = true; }
+                }
+                else if (r == Takeover.Result.Failed) Takeover.TellUser(running!, UpdateChecker.CurrentVersion);
+            }
             if (!owned)
             {
                 // Folio is already running: hand over the command line and quit

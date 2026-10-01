@@ -190,7 +190,7 @@ internal sealed class SelfTest
         var logDir = Path.Combine(root, "Local", "logs");
         var psi = new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(exe)! };
         psi.Environment["FOLIO_DATA"] = root;
-        System.Diagnostics.Process? p = null;
+        System.Diagnostics.Process? p = null, p2 = null;
         string log = "";
         try
         {
@@ -237,10 +237,52 @@ internal sealed class SelfTest
             ScreenShot("25-normal-menu");
             Key(0x1B);
             await Task.Delay(300);
+
+            // 7) a newer Folio.exe started while this one runs replaces it: the old one saves the session (with the
+            // unsaved "PROBE") and quits, the new one opens the same tabs (an update downloaded while Folio is in the tray)
+            int readyBefore = Regex.Matches(ReadLogs(logDir), Regex.Escape(" is ready in ")).Count;
+            var psi2 = new System.Diagnostics.ProcessStartInfo(exe, "--as-version=99.0") { UseShellExecute = false, WorkingDirectory = psi.WorkingDirectory };
+            psi2.Environment["FOLIO_DATA"] = root;
+            var sw2 = System.Diagnostics.Stopwatch.StartNew();
+            p2 = System.Diagnostics.Process.Start(psi2);
+            if (p2 == null) { Check("takeover.start", false, "Process.Start failed"); return; }
+            string outcome = "";
+            while (sw2.Elapsed.TotalSeconds < 30 && outcome.Length == 0)
+            {
+                await Task.Delay(250);
+                log = ReadLogs(logDir);
+                outcome = log.Split('\n').FirstOrDefault(l => l.Contains("saved the session and quit", StringComparison.Ordinal) || l.Contains("; stopping it", StringComparison.Ordinal))?.Trim() ?? "";
+            }
+            bool graceful = outcome.Contains("saved the session and quit", StringComparison.Ordinal);
+            await Task.Delay(500);
+            Check("takeover.oldQuit", graceful && p.HasExited, outcome.Length > 0 ? outcome : p2.HasExited ? $"the new one exited with code {p2.ExitCode}" : "no result in 30 s");
+            bool ready2 = false;
+            while (sw2.Elapsed.TotalSeconds < 80 && !p2.HasExited)
+            {
+                await Task.Delay(400);
+                log = ReadLogs(logDir);
+                if (Regex.Matches(log, Regex.Escape(" is ready in ")).Count > readyBefore) { ready2 = true; break; }
+            }
+            Check("takeover.ready", ready2, ready2 ? $"{sw2.ElapsedMilliseconds} ms" : p2.HasExited ? $"exited with code {p2.ExitCode}" : "not ready in 80 s");
+            if (ready2)
+            {
+                string title2 = "";
+                for (int i = 0; i < 40 && !title2.StartsWith("● ", StringComparison.Ordinal); i++)
+                {
+                    p2.Refresh();
+                    title2 = p2.MainWindowHandle != IntPtr.Zero ? WindowTitle(p2.MainWindowHandle) : "";
+                    if (!title2.StartsWith("● ", StringComparison.Ordinal)) await Task.Delay(250);
+                }
+                Check("takeover.session", title2.StartsWith("● ", StringComparison.Ordinal), $"title '{title2}'");
+                await Task.Delay(600);
+                ScreenShot("26-takeover");
+            }
         }
         catch (Exception ex) { Check("normal.exception", false, ex.Message); }
         finally
         {
+            try { if (p2 is { HasExited: false }) p2.Kill(entireProcessTree: true); } catch { }
+            try { p2?.WaitForExit(5000); } catch { }
             try { if (p is { HasExited: false }) p.Kill(entireProcessTree: true); } catch { }
             try { p?.WaitForExit(5000); } catch { }
             log = ReadLogs(logDir);
