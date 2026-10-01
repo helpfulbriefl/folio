@@ -103,5 +103,6 @@ await esbuild.build({
 });
 fs.copyFileSync(path.join(src, 'fonts.css'), path.join(dist, 'fonts.css'));
 fs.copyFileSync(path.join(src, 'index.html'), path.join(dist, 'index.html'));
+fs.copyFileSync(path.join(src, 'guard.js'), path.join(dist, 'guard.js'));
 const size = f => (fs.statSync(path.join(dist, f)).size / 1024).toFixed(0) + ' KB';
 console.log('built:', ['index.html', 'app.js', 'app.css', 'fonts.css'].map(f => f + ' ' + size(f)).join(', '), '| icons:', Object.keys(icons).length);

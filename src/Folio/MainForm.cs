@@ -30,7 +30,9 @@ internal sealed partial class MainForm : Form
     readonly System.Windows.Forms.Timer _startTimer = new() { Interval = 1000 };
     readonly System.Diagnostics.Stopwatch _startClock = System.Diagnostics.Stopwatch.StartNew();
     readonly List<string> _startIssues = new();
-    bool _startSlow, _pageLoaded;
+    bool _startSlow, _pageLoaded, _badSourceLogged;
+    int _startLog;
+    readonly List<string> _served = new();
 
     public MainForm(FolioApp app, bool primary, IEnumerable<string> files, bool startHidden)
     {
@@ -372,7 +374,9 @@ internal sealed partial class MainForm : Form
     void OnResource(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
     {
         var env = _web.CoreWebView2.Environment;
-        if (WebAssets.TryGet(e.Request.Uri, out var data, out var mime))
+        bool found = WebAssets.TryGet(e.Request.Uri, out var data, out var mime);
+        if (!WebReady && _served.Count < 24) _served.Add((found ? "" : "404 ") + e.Request.Uri.Split('?')[0].Split('/').Last() + (found ? $" {data.Length / 1024} KB" : ""));
+        if (found)
         {
             // the first paint already uses the right theme (no white flash for the dark one)
             if (mime.StartsWith("text/html", StringComparison.Ordinal))
@@ -472,13 +476,44 @@ internal sealed partial class MainForm : Form
     {
         if (_startup == null || WebReady || _startup.Failed) { _startTimer.Stop(); return; }
         var sec = _startClock.Elapsed.TotalSeconds;
-        if (sec >= StartTimeoutSeconds) { StartupFailed(_app.Str("splash.failed", "The Folio interface did not start.")); return; }
+        if (sec >= StartTimeoutSeconds)
+        {
+            _startTimer.Stop();
+            BeginInvoke(async () =>
+            {
+                var state = await ProbePageAsync();
+                if (WebReady || IsDisposed) return;
+                StartupFailed(_app.Str("splash.failed", "The Folio interface did not start."), "Page: " + state);
+            });
+            return;
+        }
         if (!_startSlow && sec >= StartSlowSeconds)
         {
             _startSlow = true;
-            Log.Warn($"The interface is still starting after {sec:0} s" + (_pageLoaded ? " (the page is loaded)" : " (the page is not loaded yet)"));
+            Log.Warn($"The interface is still starting after {sec:0} s" + (_pageLoaded ? " (the page is loaded)" : " (the page is not loaded yet)") + "; served: " + string.Join(", ", _served));
             _startup.SetText(_app.Str("splash.slow", "Starting takes longer than usual…"));
+            BeginInvoke(async () => { var state = await ProbePageAsync(); if (!WebReady) Log.Warn("Page state: " + state); });
         }
+    }
+
+    /// <summary>What the page is doing (start stage, errors, document state); "does not answer" when its script thread is busy or hung.</summary>
+    async Task<string> ProbePageAsync()
+    {
+        const string js = "JSON.stringify({ stage: (window.__folioBoot || {}).stage || null, failed: (window.__folioBoot || {}).failed || null, at: (window.__folioBoot || {}).at || null, " +
+            "errors: (window.__folioErrors || []).slice(-3), ready: document.readyState, visible: document.visibilityState, bridge: !!(window.chrome && window.chrome.webview), " +
+            "app: (document.getElementById('app') || {}).childElementCount, size: innerWidth + 'x' + innerHeight, scripts: [].map.call(document.scripts, function (x) { return x.src.split('/').pop(); }).join(' '), " +
+            "text: (document.body && document.body.innerText || '').slice(0, 160) })";
+        try
+        {
+            var core = _web.CoreWebView2;
+            if (core == null) return "WebView2 is not created";
+            var t = core.ExecuteScriptAsync(js);
+            if (await Task.WhenAny(t, Task.Delay(5000)) != t) return "the page does not answer scripts (busy or hung)";
+            var r = await t;
+            try { if (JsonNode.Parse(r) is JsonValue v && v.TryGetValue<string>(out var str)) r = str; } catch { }
+            return r.Length > 900 ? r[..900] : r;
+        }
+        catch (Exception ex) { return "probe failed: " + ex.Message; }
     }
 
     /// <summary>The page could not start: say so instead of leaving an empty window, and offer a way out.</summary>
@@ -614,7 +649,11 @@ internal sealed partial class MainForm : Form
 
     void OnWebMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        if (!(e.Source ?? "").StartsWith(WebAssets.Origin + "/", StringComparison.OrdinalIgnoreCase)) return;
+        if (!(e.Source ?? "").StartsWith(WebAssets.Origin + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!_badSourceLogged) { _badSourceLogged = true; Log.Warn("Message from an unexpected page ignored: " + e.Source); }
+            return;
+        }
         string json;
         try { json = e.TryGetWebMessageAsString(); } catch { return; }
         List<string>? dropped = null;
@@ -645,6 +684,7 @@ internal sealed partial class MainForm : Form
             if (dropped is { Count: > 0 }) Emit("app.open", new JsonObject { ["paths"] = new JsonArray(dropped.Select(x => (JsonNode)x).ToArray()) });
             return;
         }
+        if (!WebReady && m != "log.write" && _startLog++ < 30) Log.Info($"page → {m} ({_startClock.ElapsedMilliseconds} ms)");
         JsonObject reply;
         try
         {

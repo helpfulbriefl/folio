@@ -15,6 +15,11 @@ import { aiState } from './ai/ai.js';
 import { initApp, app, openWelcome, sendNativeStrings } from './app.js';
 import { checkUpdates } from './ui/about.js';
 
+// start stages: guard.js and the host (when the start is slow) read window.__folioBoot
+const BOOT = window.__folioBoot || (window.__folioBoot = {});
+const stage = s => { BOOT.stage = s; BOOT.at = Math.round(performance.now()); };
+stage('main');
+
 function report(level, msg) {
   try { host.send('log.write', { level, msg: String(msg).slice(0, 4000) }); } catch { }
 }
@@ -23,13 +28,16 @@ addEventListener('unhandledrejection', e => { const r = e.reason; if (r?.code ==
 
 function fatal(e) {
   console.error(e);
+  BOOT.failed = BOOT.stage;
   report('error', 'startup failed: ' + (e?.stack || e?.message || e));
   try { host.send('app.failed', { msg: String(e?.message || e).slice(0, 600) }); } catch { } // the host shows its start-up screen with a way out
   document.body.innerHTML = `<div class="fatal"><h1>Folio</h1><p>Не удалось запустить интерфейс / The interface failed to start.</p><pre>${esc(e?.stack || e?.message || String(e))}</pre></div>`;
 }
 
 async function boot() {
+  stage('app.init');
   const init = await host.call('app.init');
+  stage('settings');
   settings.load(init.settings || {});
   app.locale = init.locale || navigator.language;
   app.primary = init.sys?.primary !== false;
@@ -44,16 +52,22 @@ async function boot() {
   document.documentElement.classList.toggle('secondary', !app.primary);
   document.documentElement.classList.toggle('mock', !!init.sys?.mock);
 
+  stage('chrome');
   initTheme();
   buildChrome($('#app'));
+  stage('editor');
   editor.init($('#ed'));
+  stage('reader');
   initReader($('#reader'));
   initToc();
   initApp();
   sendNativeStrings();
+  stage('session');
   await restoreSession(app.primary ? init.session : null, init.args || []);
+  stage('welcome');
   if (init.flags?.firstRun && !init.flags?.selftest && app.primary && !(init.args || []).length) openWelcome();
   if (settings.get('topmost')) host.send('win.topmost', { on: true });
+  stage('ready');
   host.send('app.ready', { theme: document.documentElement.dataset.theme });
   requestAnimationFrame(() => document.documentElement.classList.add('ready'));
   if (init.flags?.selftest) {
