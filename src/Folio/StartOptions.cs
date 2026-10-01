@@ -2,11 +2,11 @@ using System.Text.Json.Nodes;
 
 namespace Folio;
 
-/// <summary>Command line: Folio.exe [files…] [--new-window] [--tray] [--quick-note] [--selftest[=dir]] [--devtools]</summary>
+/// <summary>Command line: Folio.exe [files…] [--new-window] [--tray] [--quick-note] [--selftest[=dir]] [--devtools] [--compat]</summary>
 internal sealed class StartOptions
 {
     public List<string> Files { get; } = new();
-    public bool NewWindow, Tray, QuickNote, SelfTest, Restarted, DevTools, Fresh, Autostart;
+    public bool NewWindow, Tray, QuickNote, SelfTest, Restarted, DevTools, Fresh, Autostart, Compat;
     public string? SelfTestOut;
     public string Cwd = Environment.CurrentDirectory;
 
@@ -33,6 +33,7 @@ internal sealed class StartOptions
                     case "restarted": case "updated": o.Restarted = true; break;
                     case "devtools": o.DevTools = true; break;
                     case "fresh": o.Fresh = true; break;
+                    case "compat": case "safe-mode": o.Compat = true; break;
                 }
                 continue;
             }

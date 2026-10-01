@@ -24,6 +24,7 @@ addEventListener('unhandledrejection', e => { const r = e.reason; if (r?.code ==
 function fatal(e) {
   console.error(e);
   report('error', 'startup failed: ' + (e?.stack || e?.message || e));
+  try { host.send('app.failed', { msg: String(e?.message || e).slice(0, 600) }); } catch { } // the host shows its start-up screen with a way out
   document.body.innerHTML = `<div class="fatal"><h1>Folio</h1><p>Не удалось запустить интерфейс / The interface failed to start.</p><pre>${esc(e?.stack || e?.message || String(e))}</pre></div>`;
 }
 

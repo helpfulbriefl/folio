@@ -24,6 +24,14 @@ internal sealed partial class MainForm : Form
     long _lastMaxToggle;
     public bool NativeDrag => false; // WebView2 app-region support is not used (see OnCoreReady)
 
+    // start-up: the StartupScreen covers the WebView until the page sends app.ready
+    const int StartSlowSeconds = 8, StartTimeoutSeconds = 30;
+    StartupScreen? _startup;
+    readonly System.Windows.Forms.Timer _startTimer = new() { Interval = 1000 };
+    readonly System.Diagnostics.Stopwatch _startClock = System.Diagnostics.Stopwatch.StartNew();
+    readonly List<string> _startIssues = new();
+    bool _startSlow, _pageLoaded;
+
     public MainForm(FolioApp app, bool primary, IEnumerable<string> files, bool startHidden)
     {
         _app = app;
@@ -44,6 +52,10 @@ internal sealed partial class MainForm : Form
 
         _web = new WebView2 { Dock = DockStyle.Fill, DefaultBackgroundColor = bg, AllowExternalDrop = true };
         Controls.Add(_web);
+        _startup = NewStartupScreen(bg);
+        _startup.SetText(_app.Str("splash.loading", "Starting…"));
+        _startTimer.Tick += (s, e) => StartupTick();
+        _startTimer.Start();
         _watch = new FileWatch(this,
             (p, m, s) => Emit("file.changed", new JsonObject { ["path"] = p, ["mtime"] = m, ["size"] = s }),
             p => Emit("file.deleted", new JsonObject { ["path"] = p }));
@@ -289,6 +301,8 @@ internal sealed partial class MainForm : Form
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
+        _startTimer.Dispose();
+        _paintTimer?.Dispose();
         _watch.Dispose();
         foreach (var c in _aiJobs.Values) { try { c.Cancel(); } catch { } }
         base.OnFormClosed(e);
@@ -343,6 +357,7 @@ internal sealed partial class MainForm : Form
             core.DownloadStarting += (o, e) => { e.Cancel = true; };
             core.PermissionRequested += (o, e) => { e.State = CoreWebView2PermissionState.Deny; };
             core.ProcessFailed += OnProcessFailed;
+            core.NavigationCompleted += OnNavigationCompleted;
             core.DocumentTitleChanged += (o, e) => { };
             _web.ZoomFactor = Math.Clamp(_app.SettingDouble("uiScale", 1), 0.75, 2);
             core.Navigate(WebAssets.StartUrl);
@@ -406,14 +421,184 @@ internal sealed partial class MainForm : Form
     int _crashes;
     void OnProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs e)
     {
-        Log.Error($"WebView2 process failed: {e.ProcessFailedKind} ({e.Reason})");
+        int exit = 0;
+        string extra = "";
+        try
+        {
+            exit = e.ExitCode;
+            extra = $", exit code 0x{exit:X8}";
+            if (!string.IsNullOrEmpty(e.ProcessDescription)) extra += ", " + e.ProcessDescription;
+        }
+        catch { /* older runtimes */ }
+        var what = $"WebView2 process failed: {e.ProcessFailedKind} ({e.Reason}{extra})";
+        Log.Error(what);
+        _startIssues.Add(what);
         if (e.ProcessFailedKind is CoreWebView2ProcessFailedKind.BrowserProcessExited) { _app.FatalWebView(new Exception("WebView2 browser process exited")); return; }
-        if (e.ProcessFailedKind is CoreWebView2ProcessFailedKind.RenderProcessExited or CoreWebView2ProcessFailedKind.RenderProcessUnresponsive && ++_crashes <= 3)
+        bool page = e.ProcessFailedKind is CoreWebView2ProcessFailedKind.RenderProcessExited or CoreWebView2ProcessFailedKind.RenderProcessUnresponsive;
+        if (!page) return; // GPU and helper processes are restarted by WebView2 itself
+        if (exit == unchecked((int)0xC0000428) && !_app.CompatMode && !_app.SelfTestMode)
+        {
+            // STATUS_INVALID_IMAGE_HASH: another program (usually an antivirus) puts an unsigned DLL into the page process
+            Log.Warn("The page process was stopped by the code integrity check: restarting in compatibility mode");
+            WebReady = false; // the page is gone: quit without asking it
+            _app.RestartCompat();
+            return;
+        }
+        if (++_crashes <= 3)
         {
             WebReady = false;
             _pendingEvents.Clear();
             try { _web.CoreWebView2.Reload(); } catch { }
+            return;
         }
+        StartupFailed(_app.Str("splash.failed", "The Folio interface did not start."));
+    }
+
+    void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+    {
+        if (e.IsSuccess)
+        {
+            if (!_pageLoaded) { _pageLoaded = true; Log.Info($"UI page loaded in {_startClock.ElapsedMilliseconds} ms"); }
+            return;
+        }
+        var what = $"UI page failed to load: {e.WebErrorStatus}";
+        try { if (e.HttpStatusCode != 0) what += $" (HTTP {e.HttpStatusCode})"; } catch { }
+        Log.Error(what);
+        _startIssues.Add(what);
+    }
+
+    // ------------------------------------------------------------------ start-up screen
+    void StartupTick()
+    {
+        if (_startup == null || WebReady || _startup.Failed) { _startTimer.Stop(); return; }
+        var sec = _startClock.Elapsed.TotalSeconds;
+        if (sec >= StartTimeoutSeconds) { StartupFailed(_app.Str("splash.failed", "The Folio interface did not start.")); return; }
+        if (!_startSlow && sec >= StartSlowSeconds)
+        {
+            _startSlow = true;
+            Log.Warn($"The interface is still starting after {sec:0} s" + (_pageLoaded ? " (the page is loaded)" : " (the page is not loaded yet)"));
+            _startup.SetText(_app.Str("splash.slow", "Starting takes longer than usual…"));
+        }
+    }
+
+    /// <summary>The page could not start: say so instead of leaving an empty window, and offer a way out.</summary>
+    void StartupFailed(string text, string? issue = null, bool canContinue = false)
+    {
+        if (IsDisposed) return;
+        if (_startup is { Failed: true }) return;
+        _startTimer.Stop();
+        if (!string.IsNullOrEmpty(issue)) _startIssues.Add(issue);
+        var issues = _startIssues.Count > 0 ? string.Join("\n", _startIssues.TakeLast(3))
+            : _pageLoaded ? "The page loaded, but its script did not report back." : "The page did not load.";
+        Log.Error($"The interface did not start in {_startClock.Elapsed.TotalSeconds:0} s: {issues.Replace("\n", " / ")}");
+        if (_app.SelfTestMode) { _app.FatalWebView(new Exception("the interface did not start: " + issues)); return; }
+        _startup ??= NewStartupScreen(BackColor);
+        _startup.BringToFront();
+        var detail = issues + $"\nWebView2 {_app.WebViewVersion}" + (_app.CompatMode ? " · compatibility mode" : "") + "\n" + Log.Directory;
+        var actions = new List<(string, Action)>();
+        if (canContinue) actions.Add((_app.Str("splash.continue", "Continue"), () => HideStartup()));
+        if (!_app.CompatMode) actions.Add((_app.Str("splash.compat", "Restart in compatibility mode"), () => _app.RestartCompat()));
+        else actions.Add((_app.Str("splash.restart", "Restart Folio"), () => _app.Restart()));
+        actions.Add((_app.Str("splash.logs", "Open the log folder"), () => OpenFolder(Log.Directory)));
+        actions.Add((_app.Str("splash.quit", "Quit"), () => _app.QuitAll(true)));
+        _startup.ShowFailure(text, detail, actions);
+        if (!Visible || WindowState == FormWindowState.Minimized) ShowAndActivate();
+    }
+
+    StartupScreen NewStartupScreen(Color bg)
+    {
+        var s = new StartupScreen(bg, _app.DarkTheme) { Dock = DockStyle.Fill };
+        s.DragRequested += StartDrag;
+        Controls.Add(s);
+        s.BringToFront();
+        return s;
+    }
+
+    /// <summary>main.js could not build the interface (fatal): its error text goes onto the start-up screen.</summary>
+    public void PageFailed(string? message)
+    {
+        WebReady = false;
+        StartupFailed(_app.Str("splash.failed", "The Folio interface did not start."), "Page script: " + (string.IsNullOrWhiteSpace(message) ? "unknown error" : message.Trim()));
+    }
+
+    /// <summary>app.ready: the interface is there.</summary>
+    public void HideStartup()
+    {
+        _startTimer.Stop();
+        if (_startup == null) return;
+        var s = _startup;
+        _startup = null;
+        Controls.Remove(s);
+        s.Dispose();
+        try { _web.Focus(); } catch { }
+    }
+
+    // ------------------------------------------------------------------ empty window check
+    // With some graphics drivers (or programs that hook into them) the page runs and reports app.ready, but its
+    // picture never reaches the screen: the window stays white and every click seems to do nothing. So once after
+    // the start, while the window is in front, look at the screen: the interface has dozens of colours (text,
+    // icons), an empty window one to three.
+    System.Windows.Forms.Timer? _paintTimer;
+    bool _paintChecked;
+    int _paintTicks, _paintBlank;
+
+    void SchedulePaintCheck()
+    {
+        if (_paintChecked || _paintTimer != null || _app.SelfTestMode) return;
+        _paintTimer = new System.Windows.Forms.Timer { Interval = 1500 };
+        _paintTimer.Tick += (s, e) => PaintCheck();
+        _paintTimer.Start();
+    }
+
+    void StopPaintCheck()
+    {
+        _paintChecked = true;
+        _paintTimer?.Stop();
+        _paintTimer?.Dispose();
+        _paintTimer = null;
+    }
+
+    void PaintCheck()
+    {
+        if (IsDisposed || !WebReady) { StopPaintCheck(); return; }
+        if (++_paintTicks > 60) { Log.Info("Screen check skipped: the window was not in front"); StopPaintCheck(); return; }
+        // only while the window is in front: otherwise the pixels on the screen may belong to other windows
+        if (!Visible || WindowState == FormWindowState.Minimized || Native.GetForegroundWindow() != Handle || _startup != null) { _paintBlank = 0; return; }
+        int colours = ScreenColours(_web.RectangleToScreen(_web.ClientRectangle));
+        if (colours < 0) { Log.Info("Screen check skipped: the screen cannot be read"); StopPaintCheck(); return; }
+        if (colours > 3) { Log.Info($"The interface is on screen ({colours}{(colours > 64 ? "+" : "")} colours)"); StopPaintCheck(); return; }
+        if (++_paintBlank < 3) return; // three looks in a row (4.5 s): not a moment of a theme change
+        StopPaintCheck();
+        Log.Error($"The window stays empty although the interface started ({colours} colour(s) on screen): its picture does not reach the screen");
+        if (!_app.CompatMode) { _app.RestartCompat(); return; }
+        StartupFailed(_app.Str("splash.blank", "The Folio window stays empty."), $"The window stays empty although the interface started ({colours} colour(s) on screen)", canContinue: true);
+    }
+
+    /// <summary>Distinct colours on the screen inside r (every 4th pixel, stops counting above 64); -1 when the screen cannot be read.</summary>
+    static int ScreenColours(Rectangle r)
+    {
+        try
+        {
+            r.Intersect(SystemInformation.VirtualScreen);
+            if (r.Width < 40 || r.Height < 40) return -1;
+            using var bmp = new Bitmap(r.Width, r.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+            var data = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            try
+            {
+                var set = new HashSet<int>();
+                var row = new int[data.Width];
+                for (int y = 0; y < data.Height; y += 4)
+                {
+                    System.Runtime.InteropServices.Marshal.Copy(data.Scan0 + y * data.Stride, row, 0, data.Width);
+                    for (int x = 0; x < row.Length; x += 4)
+                        if (set.Add(row[x]) && set.Count > 64) return set.Count;
+                }
+                return set.Count;
+            }
+            finally { bmp.UnlockBits(data); }
+        }
+        catch { return -1; }
     }
 
     public static void OpenExternal(string? uri)

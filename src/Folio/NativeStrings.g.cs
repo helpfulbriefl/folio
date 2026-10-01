@@ -34,6 +34,15 @@ internal static class NativeStrings
             ["win.maximize"] = "Развернуть",
             ["win.restore"] = "Восстановить",
             ["win.close"] = "Закрыть",
+            ["splash.loading"] = "Запуск Folio…",
+            ["splash.slow"] = "Запуск занимает больше обычного…",
+            ["splash.failed"] = "Интерфейс Folio не запустился.",
+            ["splash.blank"] = "Окно Folio осталось пустым: изображение не доходит до экрана.",
+            ["splash.compat"] = "Перезапустить в режиме совместимости",
+            ["splash.restart"] = "Перезапустить Folio",
+            ["splash.continue"] = "Продолжить",
+            ["splash.logs"] = "Открыть папку журнала",
+            ["splash.quit"] = "Закрыть",
         },
         ["en"] = new()
         {
@@ -64,6 +73,15 @@ internal static class NativeStrings
             ["win.maximize"] = "Maximize",
             ["win.restore"] = "Restore",
             ["win.close"] = "Close",
+            ["splash.loading"] = "Starting Folio…",
+            ["splash.slow"] = "Starting takes longer than usual…",
+            ["splash.failed"] = "The Folio interface did not start.",
+            ["splash.blank"] = "The Folio window stays empty: its picture does not reach the screen.",
+            ["splash.compat"] = "Restart in compatibility mode",
+            ["splash.restart"] = "Restart Folio",
+            ["splash.continue"] = "Continue",
+            ["splash.logs"] = "Open the log folder",
+            ["splash.quit"] = "Quit",
         },
         ["zh"] = new()
         {
@@ -94,6 +112,15 @@ internal static class NativeStrings
             ["win.maximize"] = "最大化",
             ["win.restore"] = "还原",
             ["win.close"] = "关闭",
+            ["splash.loading"] = "正在启动 Folio…",
+            ["splash.slow"] = "启动时间比平时长…",
+            ["splash.failed"] = "Folio 界面未能启动。",
+            ["splash.blank"] = "Folio 窗口一直是空白的：画面没有显示到屏幕上。",
+            ["splash.compat"] = "以兼容模式重新启动",
+            ["splash.restart"] = "重新启动 Folio",
+            ["splash.continue"] = "继续",
+            ["splash.logs"] = "打开日志文件夹",
+            ["splash.quit"] = "退出",
         },
     };
 }

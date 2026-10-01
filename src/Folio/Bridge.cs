@@ -39,10 +39,13 @@ internal sealed partial class MainForm
             case "app.init": return await _app.InitPayload(this, _files);
             case "app.ready":
                 WebReady = true;
+                HideStartup();
                 FlushEvents();
                 SendState();
                 _app.OnWindowReady(this);
+                SchedulePaintCheck();
                 return true;
+            case "app.failed": PageFailed(S(p, "msg")); return true; // main.js → fatal(): the interface could not be built
             case "app.exit": _app.WindowExit(this); return true;
             case "app.newWindow": _app.NewWindow(Array.Empty<string>()); return true;
             case "app.restart": _app.Restart(); return true;

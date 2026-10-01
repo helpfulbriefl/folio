@@ -54,6 +54,7 @@ internal static class Program
         try { webview = CoreWebView2Environment.GetAvailableBrowserVersionString(); }
         catch (WebView2RuntimeNotFoundException) { }
         catch (Exception ex) { Log.Warn("WebView2 check: " + ex.Message); }
+        if (!string.IsNullOrEmpty(webview)) Log.Info("WebView2 Runtime " + webview);
         if (string.IsNullOrEmpty(webview))
         {
             Log.Error("WebView2 Runtime is not installed");

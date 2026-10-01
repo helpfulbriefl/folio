@@ -40,6 +40,12 @@
 
 **Переносная версия.** Создайте рядом с `Folio.exe` пустой файл `folio.portable` — тогда настройки, сессия и история будут храниться в папке `FolioData` рядом с программой.
 
+### Если окно белое или пустое
+
+Пока интерфейс загружается, Folio показывает экран «Запуск Folio…». Если интерфейс не поднялся за 30 секунд или окно осталось пустым из‑за видеодрайвера, Folio сам перезапускается в **режиме совместимости** (без аппаратного ускорения графики) или показывает, что случилось, с кнопками «Перезапустить в режиме совместимости», «Открыть папку журнала» и «Закрыть».
+
+Режим можно включить и вручную: запустите `Folio.exe --compat` или включите *Настройки → Дополнительно → Режим совместимости*. Там же он выключается. Журнал лежит в `%LocalAppData%\Folio\logs` — если что‑то не работает, приложите его к [issue](https://github.com/helpfulbriefl/folio/issues).
+
 ### Где лежат данные
 
 | Что | Где |
@@ -74,6 +80,7 @@ Folio.exe [файлы…]      открыть файлы (в уже запуще
   --new-window          в новом окне
   --quick-note          сразу окно быстрой заметки
   --tray                запуститься в трее
+  --compat              режим совместимости: без аппаратного ускорения графики (запоминается)
   --selftest[=папка]    самопроверка: сценарий по всему интерфейсу + скриншоты и report.json
 ```
 
@@ -99,4 +106,4 @@ dotnet publish src/Folio/Folio.csproj -c Release -r win-x64 --self-contained -p:
 
 **Folio is a calm notepad for Windows** that lives in the tray: tabs with hot exit and file version history, reliable encoding detection (UTF-8/16/32, Windows-1251, CP866, KOI8-R, GB18030, Shift-JIS…) with one-click conversion to UTF-8, three writing modes (plain page, code with syntax highlighting, proofreading with the Windows spell checker), a reader view for Markdown and AI chat exports, AI editing with your own key (OpenAI, OpenRouter, DeepSeek, Groq, Mistral, Ollama, LM Studio or any OpenAI-compatible endpoint) shown as reviewable changes, and a global quick-note hotkey (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>).
 
-[**Download Folio.exe**](https://github.com/helpfulbriefl/folio/releases/latest/download/Folio.exe) — Windows 10/11 x64, a single file, no installer. It is not code-signed, so SmartScreen may ask you to confirm (*More info → Run anyway*). Requires the Microsoft Edge WebView2 Runtime (built into Windows 11). Create an empty `folio.portable` file next to the exe for portable mode. The interface is available in Russian, English and Chinese; custom translations can be added from a template.
+[**Download Folio.exe**](https://github.com/helpfulbriefl/folio/releases/latest/download/Folio.exe) — Windows 10/11 x64, a single file, no installer. It is not code-signed, so SmartScreen may ask you to confirm (*More info → Run anyway*). Requires the Microsoft Edge WebView2 Runtime (built into Windows 11). Create an empty `folio.portable` file next to the exe for portable mode. If the window stays white or empty, Folio restarts itself in compatibility mode (no GPU acceleration); you can also start it with `Folio.exe --compat` or turn it on in *Settings → Advanced*. The log is in `%LocalAppData%\Folio\logs`. The interface is available in Russian, English and Chinese; custom translations can be added from a template.

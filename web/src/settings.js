@@ -10,6 +10,7 @@ export const DEFAULTS = {
   smoothTheme: true,
   animations: true,
   nativeFrame: false,
+  compatMode: false,         // no GPU acceleration (host: compat-mode flag file); takes effect after a restart
   zoom: 1,
   wheelZoom: true,
   fontUi: 'Inter',

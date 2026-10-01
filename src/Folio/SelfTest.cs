@@ -174,6 +174,129 @@ internal sealed class SelfTest
         ScreenShot("23-glass-frame");
         await Js(w, "__folio.settings.set('theme', 'paper')");
         await Task.Delay(600);
+
+        // 6) Folio.exe started the way a user starts it
+        await NormalStartAsync(w);
+    }
+
+    /// <summary>Starts this exe once more without --selftest: fresh profile (first run, welcome page), tray icon, hotkeys,
+    /// instance pipe, started while another window is in front. Checks that the window really shows the interface on
+    /// screen and reacts to the real mouse and keyboard.</summary>
+    async Task NormalStartAsync(MainForm w)
+    {
+        var exe = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(exe)) { Check("normal.start", false, "no exe path"); return; }
+        var root = Path.Combine(Path.GetTempPath(), "folio-normal-" + Environment.ProcessId);
+        var logDir = Path.Combine(root, "Local", "logs");
+        var psi = new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(exe)! };
+        psi.Environment["FOLIO_DATA"] = root;
+        System.Diagnostics.Process? p = null;
+        string log = "";
+        try
+        {
+            w.ShowAndActivate(); // another app is in front, as in Explorer or a browser
+            await Task.Delay(300);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            p = System.Diagnostics.Process.Start(psi);
+            if (p == null) { Check("normal.start", false, "Process.Start failed"); return; }
+            bool ready = false;
+            while (sw.Elapsed.TotalSeconds < 45 && !p.HasExited)
+            {
+                await Task.Delay(400);
+                log = ReadLogs(logDir);
+                if (log.Contains(" is ready in ", StringComparison.Ordinal)) { ready = true; break; }
+            }
+            Check("normal.ready", ready, ready ? $"{sw.ElapsedMilliseconds} ms" : p.HasExited ? $"exited with code {p.ExitCode}" : "not ready in 45 s");
+            if (!ready) return;
+            IntPtr h = IntPtr.Zero;
+            for (int i = 0; i < 25 && h == IntPtr.Zero; i++) { p.Refresh(); h = p.MainWindowHandle; if (h == IntPtr.Zero) await Task.Delay(200); }
+            Check("normal.window", h != IntPtr.Zero, h == IntPtr.Zero ? "no main window" : WindowTitle(h));
+            if (h == IntPtr.Zero) return;
+            await Task.Delay(1500);
+            Check("normal.responds", Native.SendMessageTimeout(h, 0, IntPtr.Zero, IntPtr.Zero, Native.SMTO_ABORTIFHUNG, 3000, out _) != IntPtr.Zero);
+            _info["normalForeground"] = Native.GetForegroundWindow() == h;
+            w.WindowState = FormWindowState.Minimized; // the self-test window out of the way
+            await Task.Delay(800);
+            Native.GetWindowRect(h, out var wr);
+            var rect = Rectangle.FromLTRB(wr.Left, wr.Top, wr.Right, wr.Bottom);
+            // a click on the text activates the window like a user's click does
+            var c = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height * 3 / 5);
+            MoveTo(c.X, c.Y); await Task.Delay(150);
+            Send(Native.MOUSEEVENTF_LEFTDOWN); await Task.Delay(40); Send(Native.MOUSEEVENTF_LEFTUP);
+            await Task.Delay(700);
+            ScreenShot("24-normal-start");
+            int colours = Colours(rect);
+            Check("normal.painted", colours >= 16, $"{colours} colours in the window");
+            var before = WindowTitle(h);
+            foreach (var ch in "PROBE") { Key((byte)ch); await Task.Delay(40); }
+            string after = before;
+            for (int i = 0; i < 20 && !after.StartsWith("● ", StringComparison.Ordinal); i++) { await Task.Delay(200); after = WindowTitle(h); }
+            Check("normal.typing", after.StartsWith("● ", StringComparison.Ordinal), $"title '{before}' → '{after}'");
+            Key(0x79); // F10: the menu bar of the page
+            await Task.Delay(800);
+            ScreenShot("25-normal-menu");
+            Key(0x1B);
+            await Task.Delay(300);
+        }
+        catch (Exception ex) { Check("normal.exception", false, ex.Message); }
+        finally
+        {
+            try { if (p is { HasExited: false }) p.Kill(entireProcessTree: true); } catch { }
+            try { p?.WaitForExit(5000); } catch { }
+            log = ReadLogs(logDir);
+            var screen = log.Split('\n').FirstOrDefault(l => l.Contains("The interface is on screen", StringComparison.Ordinal) || l.Contains("Screen check skipped", StringComparison.Ordinal) || l.Contains("stays empty", StringComparison.Ordinal));
+            _info["normalScreenCheck"] = screen?.Trim() ?? "(no result yet)";
+            Check("normal.noCompat", !log.Contains("compatibility mode", StringComparison.Ordinal) && !log.Contains("stays empty", StringComparison.Ordinal), screen?.Trim() ?? "");
+            _info["normalLogErrors"] = new JsonArray(log.Split('\n').Where(l => l.Contains(" ERROR ", StringComparison.Ordinal)).Take(8).Select(l => (JsonNode)l.Trim()).ToArray());
+            try { File.WriteAllText(Path.Combine(OutDir, "normal-start.log"), log); } catch { }
+            if (w.WindowState == FormWindowState.Minimized) w.WindowState = FormWindowState.Normal;
+            w.ShowAndActivate();
+            await Task.Delay(300);
+        }
+    }
+
+    static string ReadLogs(string dir)
+    {
+        if (!Directory.Exists(dir)) return "";
+        var sb = new StringBuilder();
+        foreach (var f in Directory.GetFiles(dir).OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                using var fs = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var r = new StreamReader(fs);
+                sb.Append(r.ReadToEnd());
+            }
+            catch { }
+        }
+        return sb.ToString();
+    }
+
+    static string WindowTitle(IntPtr h)
+    {
+        var sb = new StringBuilder(512);
+        Native.GetWindowText(h, sb, sb.Capacity);
+        return sb.ToString();
+    }
+
+    static void Key(byte vk)
+    {
+        Native.keybd_event(vk, 0, 0, UIntPtr.Zero);
+        Native.keybd_event(vk, 0, Native.KEYEVENTF_KEYUP, UIntPtr.Zero);
+    }
+
+    /// <summary>Distinct colours on the screen inside r (every 3rd pixel): an empty white window has one or two.</summary>
+    static int Colours(Rectangle r)
+    {
+        r.Intersect(SystemInformation.VirtualScreen);
+        if (r.Width < 10 || r.Height < 10) return 0;
+        using var bmp = new Bitmap(r.Width, r.Height);
+        using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+        var set = new HashSet<int>();
+        for (int y = 0; y < r.Height; y += 3)
+            for (int x = 0; x < r.Width; x += 3)
+                set.Add(bmp.GetPixel(x, y).ToArgb());
+        return set.Count;
     }
 
     static async Task Js(MainForm w, string js)

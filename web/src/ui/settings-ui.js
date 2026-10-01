@@ -131,6 +131,7 @@ const SEC = {
 
   advanced: () => sec('set.dataH', `<div class="frow wide"><span class="lb">${esc(t('set.dataDir'))}</span><code class="path">${esc(APP.sys.dataDir || '')}</code><button class="btn ghost sm" data-act="openData">${I('folder-open', 'xs')}${esc(t('set.open'))}</button></div>
       <div class="frow wide"><span class="lb">${esc(t('set.logs'))}</span><button class="btn ghost sm" data-act="logs">${I('scroll-text', 'xs')}${esc(t('cmd.help.logs'))}</button><button class="btn ghost sm" data-act="logsFolder">${I('folder-open', 'xs')}${esc(t('set.open'))}</button></div>`) +
+    sec('set.renderH', grid(tg('compatMode'))) +
     sec('set.backupH', `<div class="btn-row"><button class="btn ghost" data-act="export">${I('download', 'sm')}${esc(t('set.export'))}</button><button class="btn ghost" data-act="import">${I('upload', 'sm')}${esc(t('set.import'))}</button><button class="btn ghost" data-act="exportLang">${I('languages', 'sm')}${esc(t('set.langTemplate'))}</button></div>`) +
     sec('set.dangerH', `<div class="btn-row"><button class="btn danger" data-act="resetAll">${I('rotate-ccw', 'sm')}${esc(t('set.resetAll'))}</button></div>`),
 };
@@ -200,6 +201,7 @@ function afterSet(k) {
   if (k === 'lang') setTimeout(renderSection, 30);
   if (k === 'ai.provider') { const P = PROVIDERS[val('ai.provider')]; if (P && val('ai.provider') !== 'custom') { settings.set('ai.baseUrl', P.baseUrl); settings.set('ai.model', P.model); } refreshKey().then(() => renderSection()); }
   if (k === 'punctuation' || k === 'spellInStandard') clearSpellCache();
+  if (k === 'compatMode') toast(t('set.compatMode.restart'), { icon: 'refresh-cw', ms: 8000, action: { label: t('set.restartNow'), run: () => { settings.flush(); setTimeout(() => host.send('app.restart'), 150); } } });
 }
 
 function resetSection(s) {

@@ -1,7 +1,7 @@
 {
   "name": "folio-web",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Folio UI (runs inside WebView2)",
   "type": "module",
   "scripts": {

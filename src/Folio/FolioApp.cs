@@ -18,6 +18,8 @@ internal sealed class FolioApp : ApplicationContext
     public SpellService Spell { get; } = new();
     public SelfTest? SelfTest { get; }
     public int ExitCode { get; set; }
+    /// <summary>No GPU acceleration and no renderer code-integrity check: for PCs where the window stays white.</summary>
+    public bool CompatMode { get; }
 
     readonly List<MainForm> _windows = new();
     readonly Control _ui = new();
@@ -37,6 +39,7 @@ internal sealed class FolioApp : ApplicationContext
     bool _quitting, _shutdown, _fatal, _hotkeyWarned, _readyLogged;
 
     static string StringsFile => Path.Combine(AppPaths.Local, "strings.json");
+    static string CompatFlag => Path.Combine(AppPaths.Local, "compat-mode");
 
     public FolioApp(StartOptions options, string webViewVersion)
     {
@@ -45,6 +48,9 @@ internal sealed class FolioApp : ApplicationContext
         _ui.CreateControl();
         _ = _ui.Handle;
         _settings = JsonStore.LoadNode(AppPaths.Settings) as JsonObject ?? new JsonObject();
+        if (options.Compat) WriteCompatFlag(); // --compat is remembered: it is used when the normal start shows nothing
+        CompatMode = options.Compat || File.Exists(CompatFlag) || SettingBool("compatMode", false);
+        if (CompatMode) Log.Info("Compatibility mode: no GPU acceleration");
         LoadStrings();
         Spell.SetDictionary(DictionaryWords());
         Log.Written += OnLog;
@@ -164,9 +170,9 @@ internal sealed class FolioApp : ApplicationContext
         foreach (var w in list.Where(x => x != p)) w.RequestQuit(force);
     }
 
-    public void Restart()
+    public void Restart(string? extraArgs = null)
     {
-        _restartArgs = "--restarted";
+        _restartArgs = "--restarted" + (string.IsNullOrEmpty(extraArgs) ? "" : " " + extraArgs);
         QuitAll();
     }
 
@@ -206,11 +212,29 @@ internal sealed class FolioApp : ApplicationContext
         if (list.Count == 0) Shutdown();
     }
 
-    public Task<CoreWebView2Environment> EnvironmentAsync() =>
-        _env ??= CoreWebView2Environment.CreateAsync(null, AppPaths.WebView, new CoreWebView2EnvironmentOptions
-        {
-            AdditionalBrowserArguments = "--disable-features=msSmartScreenProtection,msEdgeTranslate --disable-background-timer-throttling",
-        });
+    public Task<CoreWebView2Environment> EnvironmentAsync()
+    {
+        if (_env != null) return _env;
+        var features = "msSmartScreenProtection,msEdgeTranslate" + (CompatMode ? ",RendererCodeIntegrity" : "");
+        var args = $"--disable-features={features} --disable-background-timer-throttling" + (CompatMode ? " --disable-gpu --disable-gpu-compositing" : "");
+        // a separate profile folder: a WebView2 still running with the other switches must not block the start
+        var folder = CompatMode ? AppPaths.WebView + "-compat" : AppPaths.WebView;
+        return _env = CoreWebView2Environment.CreateAsync(null, folder, new CoreWebView2EnvironmentOptions { AdditionalBrowserArguments = args });
+    }
+
+    /// <summary>The interface did not start: remember the compatibility mode and start Folio again.</summary>
+    public void RestartCompat()
+    {
+        WriteCompatFlag();
+        Log.Warn("Restarting in compatibility mode (no GPU acceleration)");
+        Restart("--compat"); // also on the command line: a flag file that could not be written must not lead to a restart loop
+    }
+
+    static void WriteCompatFlag()
+    {
+        try { if (!File.Exists(CompatFlag)) { Directory.CreateDirectory(AppPaths.Local); File.WriteAllText(CompatFlag, DateTime.Now.ToString("s")); } }
+        catch (Exception ex) { Log.Warn("compat-mode: " + ex.Message); }
+    }
 
     // ------------------------------------------------------------------ init payload for the UI
     public async Task<JsonObject> InitPayload(MainForm w, IReadOnlyList<string> files)
@@ -231,7 +255,7 @@ internal sealed class FolioApp : ApplicationContext
         return new JsonObject
         {
             ["version"] = UpdateChecker.CurrentVersion,
-            ["settings"] = firstRun ? null : _settings.DeepClone(),
+            ["settings"] = SettingsForUi(firstRun),
             ["recent"] = recent ?? new JsonArray(),
             ["session"] = session,
             ["args"] = new JsonArray(files.Select(f => (JsonNode)f).ToArray()),
@@ -249,6 +273,13 @@ internal sealed class FolioApp : ApplicationContext
             ["langs"] = CustomLanguages(),
             ["hasAiKey"] = !string.IsNullOrEmpty(Secrets.Get(SettingString("ai.provider") ?? "openai")),
         };
+    }
+
+    JsonObject? SettingsForUi(bool firstRun)
+    {
+        var s = firstRun ? null : (JsonObject)_settings.DeepClone();
+        if (CompatMode) { s ??= new JsonObject(); s["compatMode"] = true; }
+        return s;
     }
 
     static JsonArray CustomLanguages()
@@ -296,6 +327,15 @@ internal sealed class FolioApp : ApplicationContext
     public void SaveSettings(JsonObject s)
     {
         _settings = (JsonObject)s.DeepClone();
+        if (s["compatMode"] is JsonValue cv && cv.TryGetValue<bool>(out var compat))
+        {
+            if (compat) WriteCompatFlag();
+            else
+            {
+                try { if (File.Exists(CompatFlag)) { File.Delete(CompatFlag); Log.Info("Compatibility mode is off from the next start"); } }
+                catch (Exception ex) { Log.Warn("compat-mode: " + ex.Message); }
+            }
+        }
         try { JsonStore.SaveNode(AppPaths.Settings, _settings); }
         catch (Exception ex) { Log.Warn("settings.json: " + ex.Message); }
     }
