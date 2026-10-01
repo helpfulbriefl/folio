@@ -7,7 +7,7 @@ import { host } from '../host.js';
 import { docs, tabName } from '../docs.js';
 import { editor } from '../editor/editor.js';
 import { propose, proposalOf, accept, reject, setProposal } from '../editor/aidiff.js';
-import { PROVIDERS, aiState, refreshKey, needsKey, configured, taskPrompt, EDIT_TASKS, complete, cleanEdit, parseEdit } from '../ai/ai.js';
+import { PROVIDERS, aiState, refreshKey, needsKey, configured, taskPrompt, EDIT_TASKS, complete, cleanEdit, parseEdit, profiles, activeProfile, useProfile, profileLabel, saveKey, loadModels } from '../ai/ai.js';
 import { renderMd } from '../reader/md.js';
 import { openMenu } from './menu.js';
 import { toast, prompt } from './dialogs.js';
@@ -48,7 +48,7 @@ function render(fresh) {
   const ok = configured();
   const composing = $('.composer textarea', box)?.value || '';
   box.innerHTML = `<div class="panel ai-panel ${fresh ? 'enter' : ''}">
-    <div class="panel-h">${I('sparkles')}<span>${esc(t('ai.title'))}</span>${ok ? `<button class="badge b-gray model" data-ai="model" title="${esc(t('ai.model'))}">${esc(shortModel(settings.get('ai.model')))}${I('chevron-down', 'xs')}</button>` : ''}<span class="grow"></span>
+    <div class="panel-h">${I('sparkles')}<span>${esc(t('ai.title'))}</span>${ok ? `<button class="badge b-gray model" data-ai="model" title="${esc(t('ai.profileModel'))}">${profiles().length > 1 ? `<span class="pn">${esc(profileLabel(activeProfile()))}</span>·` : ''}${esc(shortModel(settings.get('ai.model')))}${I('chevron-down', 'xs')}</button>` : ''}<span class="grow"></span>
       <button class="icon-btn" data-ai="new" title="${esc(t('ai.newChat'))}">${I('message-square-plus', 'sm')}</button>
       <button class="icon-btn" data-ai="settings" title="${esc(t('cmd.ai.settings'))}">${I('settings-2', 'sm')}</button>
       <button class="icon-btn" data-ai="close" title="${esc(t('dlg.close'))}">${I('x', 'sm')}</button></div>
@@ -90,12 +90,21 @@ function msgHTML(m, i) {
     return `<div class="msg-u">${esc(m.text)}${ctx}</div>`;
   }
   let body;
-  if (m.error) body = `<div class="ai-err">${I('triangle-alert', 'sm')}<div><b>${esc(errTitle(m.error))}</b><span>${esc(errText(m.error))}</span></div></div>${m.error.code === 'auth' || m.error.code === 'config' ? `<button class="btn ghost sm" data-ai="settings">${esc(t('cmd.ai.settings'))}</button>` : `<button class="btn ghost sm" data-ai="retry">${I('rotate-ccw', 'xs')}${esc(t('ai.retry'))}</button>`}`;
-  else if (m.pending && (!m.text || EDIT_TASKS.has(m.task))) body = `<div class="typing"><i></i><i></i><i></i><span>${esc(t(EDIT_TASKS.has(m.task) ? 'ai.working' : 'ai.thinking'))}${m.progress ? ` · ${m.progress}` : ''}</span></div>`;
-  else body = `<div class="md">${renderMd(m.text)}</div>` + (m.pending ? '<span class="cursor-blink"></span>' : '');
+  const think = thinkHTML(m);
+  if (m.error) body = think + `<div class="ai-err">${I('triangle-alert', 'sm')}<div><b>${esc(errTitle(m.error))}</b><span>${esc(errText(m.error))}</span></div></div>${m.error.code === 'model' ? `<button class="btn ghost sm" data-ai="model">${I('list', 'xs')}${esc(t('ai.pickModel'))}</button>` : m.error.code === 'auth' || m.error.code === 'config' ? `<button class="btn ghost sm" data-ai="settings">${esc(t('cmd.ai.settings'))}</button>` : `<button class="btn ghost sm" data-ai="retry">${I('rotate-ccw', 'xs')}${esc(t('ai.retry'))}</button>`}`;
+  else if (m.pending && (!m.text || EDIT_TASKS.has(m.task))) body = think + `<div class="typing"><i></i><i></i><i></i><span>${esc(t(m.thinking ? 'ai.reasoning' : EDIT_TASKS.has(m.task) ? 'ai.working' : 'ai.thinking'))}${m.progress ? ` · ${m.progress}` : m.thinking && m.think ? ` · ${m.think.length}` : ''}</span></div>`;
+  else body = think + `<div class="md">${renderMd(m.text)}</div>` + (m.pending ? '<span class="cursor-blink"></span>' : '');
   const changes = m.changes && i === lastChangeIdx() ? changesHTML(m) : '';
   const tools = !m.pending && !m.error && m.text && !m.changes ? `<div class="msg-tools"><button class="icon-btn xs" data-ai="copyMsg" data-i="${i}" title="${esc(t('reader.copy'))}">${I('copy', 'xs')}</button><button class="icon-btn xs" data-ai="insertMsg" data-i="${i}" title="${esc(t('ai.insert'))}">${I('text-cursor-input', 'xs')}</button></div>` : '';
   return `<div class="msg-a" data-m="${i}"><span class="av ai">AI</span><div class="txt">${body}${changes}${tools}</div></div>`;
+}
+
+/** The model's reasoning, folded (open while it is still thinking, if the user wants to watch it). */
+function thinkHTML(m) {
+  if (!m.think || settings.get('ai.showThinking') === false) return '';
+  const open = m.pending && m.thinking && !m.text;
+  const tail = m.think.length > 4000 ? '…' + m.think.slice(-4000) : m.think;
+  return `<details class="think" ${open || m.thinkOpen ? 'open' : ''} data-think="${chat.indexOf(m)}"><summary>${I('brain', 'xs')}<span>${esc(t(m.pending && m.thinking ? 'ai.reasoning' : 'ai.reasoned'))}</span><span class="mut">· ${m.think.length}</span></summary><div class="think-b">${esc(tail)}</div></details>`;
 }
 
 const vis = s => { const x = s.length > 60 ? s.slice(0, 57) + '…' : s; return x.replace(/\n/g, '↵').replace(/^ +| +$| {2,}/g, m => '␣'.repeat(m.length)); };
@@ -173,7 +182,7 @@ async function connect() {
   const base = $('[data-f=baseUrl]', box)?.value.trim();
   if (model) settings.set('ai.model', model);
   if (base) settings.set('ai.baseUrl', base.replace(/\/+$/, ''));
-  if (key) { await host.call('ai.setKey', { provider: settings.get('ai.provider'), key }); aiState.hasKey = true; }
+  if (key) await saveKey(key);
   if (needsKey() && !aiState.hasKey) { toast(t('ai.enterKey'), { icon: 'key-round', kind: 'err' }); return; }
   render(false);
   toast(t('ai.connected'), { icon: 'plug-zap' });
@@ -184,7 +193,7 @@ function errTitle(e) { return t('aiErr.' + (e.code || 'error') + '.t') !== 'aiEr
 function errText(e) {
   const k = 'aiErr.' + (e.code || 'error');
   const s = t(k, { model: settings.get('ai.model') });
-  return s === k ? (e.message || String(e)) : s + (e.code === 'http' || e.code === 'server' || e.code === 'error' ? (e.message ? ` (${e.message})` : '') : '');
+  return s === k ? (e.message || String(e)) : s + (['http', 'server', 'error', 'model', 'format', 'network'].includes(e.code) ? (e.message ? ` (${e.message})` : '') : '');
 }
 
 function stop() { busy?.ctrl.abort(); }
@@ -212,8 +221,10 @@ export async function runTask(task, arg) {
   try {
     const r = await complete([{ role: 'system', content: taskPrompt(task, target) }, { role: 'user', content: `<text>\n${c.text}\n</text>` }], {
       signal: ctrl.signal,
-      onDelta: s => { msg.progress = s.length; if (!EDIT_TASKS.has(task)) msg.text = s; updateLast(); },
+      onDelta: s => { if (s) { msg.thinking = false; msg.progress = s.length; } if (!EDIT_TASKS.has(task)) msg.text = s; updateLast(); },
+      onThink: (s, open) => { msg.think = s; msg.thinking = open !== false && !msg.progress; updateLast(); },
     });
+    msg.think = r.thoughts || msg.think; msg.thinking = false;
     if (EDIT_TASKS.has(task)) {
       const view = editor.view;
       if (docs.active !== tab || view.state.sliceDoc(c.from, c.from + c.text.length) !== c.text) throw { code: 'changed' };
@@ -227,7 +238,7 @@ export async function runTask(task, arg) {
     if (e?.code === 'cancelled' || ctrl.signal.aborted) { msg.text = t('ai.stopped'); msg.stopped = true; }
     else msg.error = e;
   } finally {
-    msg.pending = false; busy = null; renderMsgs();
+    msg.pending = false; msg.thinking = false; busy = null; renderMsgs();
   }
 }
 
@@ -266,8 +277,10 @@ async function send() {
   try {
     const r = await complete([{ role: 'system', content: taskPrompt('chat') }, ...history, { role: 'user', content: doc + text }], {
       signal: ctrl.signal,
-      onDelta: s => { const cut = s.indexOf('<folio-edit>'); msg.text = cut >= 0 ? s.slice(0, cut) + `\n\n_${t('ai.preparingEdit')}_` : s; updateLast(); },
+      onDelta: s => { if (s) msg.thinking = false; const cut = s.indexOf('<folio-edit>'); msg.text = cut >= 0 ? s.slice(0, cut) + `\n\n_${t('ai.preparingEdit')}_` : s; updateLast(); },
+      onThink: (s, open) => { msg.think = s; msg.thinking = open !== false && !msg.text; updateLast(); },
     });
+    msg.think = r.thoughts || msg.think; msg.thinking = false;
     msg.raw = r.text;
     const ed = parseEdit(r.text);
     if (ed && c.kind !== 'none') {
@@ -279,7 +292,7 @@ async function send() {
   } catch (e) {
     if (e?.code === 'cancelled' || ctrl.signal.aborted) { msg.text = (msg.text || '') + `\n\n_${t('ai.stopped')}_`; msg.stopped = true; }
     else msg.error = e;
-  } finally { msg.pending = false; busy = null; renderMsgs(); }
+  } finally { msg.pending = false; msg.thinking = false; busy = null; renderMsgs(); }
 }
 
 export function acceptAll() {
@@ -325,18 +338,30 @@ document.addEventListener('click', async e => {
       '-', { label: t('ai.ctxAuto'), checked: !ctxMode, run: () => { ctxMode = null; renderCtx(); } },
     ], { anchor: b, alignRight: true });
   } else if (a === 'model') {
-    const items = [{ h: t('ai.model') }];
+    const items = [];
+    const list = profiles();
+    if (list.length > 1) {
+      items.push({ h: t('ai.profiles') });
+      const act = activeProfile();
+      list.forEach(p => items.push({ label: profileLabel(p), note: shortModel(p.model), checked: p.id === act?.id, run: async () => { await useProfile(p.id); render(false); toast(t('set.profSwitched', { name: profileLabel(p) }), { icon: 'sparkles' }); } }));
+      items.push('-');
+    }
+    items.push({ h: t('ai.model') });
     let models = [];
-    try { models = (await host.call('ai.models', { provider: settings.get('ai.provider'), baseUrl: settings.get('ai.baseUrl') }))?.models || []; } catch { }
+    try { models = [...await loadModels()]; } catch { }
     const cur = settings.get('ai.model');
-    if (!models.includes(cur)) models.unshift(cur);
-    models.slice(0, 18).forEach(m => items.push({ label: m, checked: m === cur, run: () => { settings.set('ai.model', m); render(false); } }));
-    items.push('-', { icon: 'pencil', label: t('ai.otherModel'), run: async () => { const v = await prompt({ title: t('ai.model'), value: cur }); if (v) { settings.set('ai.model', v.trim()); render(false); } } });
-    openMenu(items, { anchor: b });
+    if (cur && !models.includes(cur)) models.unshift(cur);
+    models.slice(0, 60).forEach(m => items.push({ label: m, checked: m === cur, run: () => { settings.set('ai.model', m); render(false); } }));
+    items.push('-', { icon: 'pencil', label: t('ai.otherModel'), run: async () => { const v = await prompt({ title: t('ai.model'), value: cur }); if (v) { settings.set('ai.model', v.trim()); render(false); } } },
+      { icon: 'settings-2', label: t('ai.manageProfiles'), run: () => run('ai.settings') });
+    openMenu(items, { anchor: b, cls: 'font-dd' });
   } else if (a === 'provider') providerMenu(b, () => render(false));
   else if (a === 'connect') connect();
   else if (a === 'getKey') { const P = PROVIDERS[settings.get('ai.provider')]; if (P?.keyUrl) host.send('sys.openUrl', { url: P.keyUrl }); }
 });
+
+// remember only the user's own clicks (a re-render with [open] also fires 'toggle')
+document.addEventListener('click', e => { const d = e.target.closest?.('details.think > summary')?.parentElement; if (d && chat[+d.dataset.think]) chat[+d.dataset.think].thinkOpen = !d.open; }, true);
 
 bus.on('cursor', debounce(() => { if (sideOpen('ai')) renderCtx(); }, 150));
 bus.on('active', () => { if (sideOpen('ai')) { ctxMode = null; renderCtx(); renderMsgs(); } });

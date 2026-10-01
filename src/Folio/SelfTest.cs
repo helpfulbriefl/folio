@@ -457,6 +457,7 @@ internal sealed class FakeAiServer : IDisposable
     static readonly (string From, string To)[] Fixes =
     {
         ("Впринципе", "В принципе"), ("вдохновения ,", "вдохновения,"), ("тишина,  полчаса", "тишина, полчаса"), ("по утрам пока", "по утрам, пока"),
+        ("Basicaly", "Basically"), ("inspiration ,", "inspiration,"), ("silence,  half", "silence, half"),
         ("recieve", "receive"), ("feedbak", "feedback"), ("teh", "the"),
     };
 

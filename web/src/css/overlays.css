@@ -270,3 +270,52 @@ body.dropping .drop-ov{display:grid;animation:fade .15s}
   #print .codeblk-h .cp{display:none}
   @page{margin:18mm 16mm}
 }
+
+/* settings → AI profiles */
+.profs{display:flex;flex-direction:column;gap:6px}
+.prof{display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 10px 6px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;transition:border-color .12s,background .12s;text-align:left;width:100%}
+.prof:hover{border-color:var(--line-2)}
+.prof.on{border-color:var(--text);box-shadow:0 0 0 1px var(--text)}
+.prof .rd{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line-2);flex:none;display:grid;place-items:center}
+.prof.on .rd{border-color:var(--teal-ink)}
+.prof.on .rd::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--teal-ink)}
+.prof .pb{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.prof .pb b{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prof .pb small{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
+.prof .pa{display:flex;gap:2px;opacity:0;transition:opacity .12s}
+.prof:hover .pa,.prof:focus-within .pa{opacity:1}
+.prof.add{justify-content:center;border-style:dashed;color:var(--text-2);font-weight:550;min-height:38px}
+.prof.add:hover{color:var(--text);background:var(--hover)}
+.prof-nm{text-transform:none;letter-spacing:0;color:var(--text-2)}
+.combo{display:flex;align-items:center;position:relative;min-width:0}
+.combo .inp{padding-right:34px;font-family:var(--mono);font-size:12.5px}
+.combo-b{position:absolute;right:3px;top:3px;bottom:3px;width:28px;display:grid;place-items:center;border-radius:7px;color:var(--muted)}
+.combo-b:hover{background:var(--hover);color:var(--text)}
+.combo-b.busy .i{animation:spin 1s linear infinite}
+.icon-btn.spin .i{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.frow .pv.model-note{font-size:12px;color:var(--muted);white-space:normal}
+.frow .pv.model-note.warn{color:var(--coral-ink)}
+.frow:has(.model-note){min-height:0;border-top:0;margin-top:-8px}
+.model-dd .mi .lbl{font-family:var(--mono);font-size:12px}
+/* settings → file types */
+.assoc{margin-bottom:6px}
+.assoc .chip{font-family:var(--mono);font-size:12px;height:26px}
+.assoc .chip .dflt{display:flex;margin-left:2px;opacity:.85}
+.assoc.code .chip{opacity:.85}
+.assoc+.btn-row{margin-top:8px;align-items:center}
+/* settings → support */
+.sup-card{display:flex;align-items:center;gap:14px;padding:14px 16px}
+.sup-ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:none}
+.sup-ic .i{width:22px;height:22px}
+.sup-ic.gh{background:var(--text);color:var(--surface)}
+.sup-ic.cf{background:color-mix(in srgb,#C68A4E 22%,var(--surface));color:#8A5A2B}
+html[data-dark="1"] .sup-ic.cf{color:#E2B07A}
+.sup-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.sup-b b{font-weight:650;font-size:14px}
+.sup-b>span{color:var(--text-2);font-size:12.5px}
+.sup-b code.path{align-self:flex-start;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.sup-b .eth{display:flex;align-items:center;gap:8px;min-width:0;margin-top:2px}
+.sup-b .eth-l{font:700 10.5px/1 var(--ui);letter-spacing:.06em;padding:4px 6px;border-radius:6px;background:var(--lav-soft);color:var(--lav-ink);flex:none}
+.sup-b .eth code{font-size:11.5px;user-select:all;word-break:break-all;white-space:normal}
+.sup-acts{display:flex;flex-direction:column;gap:6px;flex:none}

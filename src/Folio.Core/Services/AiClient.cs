@@ -68,10 +68,11 @@ public static class AiClient
     }
 
     /// <summary>Sends the chat, calls onDelta with pieces of the answer as they arrive, returns the whole answer.</summary>
-    public static async Task<string> CompleteAsync(AiRequest r, Action<string>? onDelta, CancellationToken ct)
+    public static async Task<string> CompleteAsync(AiRequest r, Action<string>? onDelta, CancellationToken ct, Action<string>? onReasoning = null)
     {
         if (string.IsNullOrWhiteSpace(r.BaseUrl)) throw new AiException("config", "API address is empty");
         if (string.IsNullOrWhiteSpace(r.Model)) throw new AiException("config", "Model is not selected");
+        r.Model = r.Model.Trim();
         var body = new JsonObject
         {
             ["model"] = r.Model,
@@ -101,16 +102,27 @@ public static class AiClient
             {
                 string text = "";
                 try { text = await resp.Content.ReadAsStringAsync(cts.Token); } catch { }
-                throw MapError((int)resp.StatusCode, text);
+                throw MapError((int)resp.StatusCode, text, r.Model);
             }
             var media = resp.Content.Headers.ContentType?.MediaType ?? "";
             try
             {
+                var reasoning = new StringBuilder();
+                Action<string> think = piece => { reasoning.Append(piece); onReasoning?.Invoke(piece); };
+                string answer;
                 if (media.Contains("event-stream", StringComparison.OrdinalIgnoreCase))
-                    return await ReadStreamAsync(resp, onDelta, cts.Token);
-                var json = await resp.Content.ReadAsStringAsync(cts.Token);
-                var answer = ParseFull(json);
-                onDelta?.Invoke(answer);
+                    answer = await ReadStreamAsync(resp, onDelta, think, cts.Token);
+                else
+                {
+                    var json = await resp.Content.ReadAsStringAsync(cts.Token);
+                    // some servers ignore "stream": false/true and still answer with SSE text
+                    answer = json.TrimStart().StartsWith("data:", StringComparison.Ordinal) ? ParseSseText(json, onDelta, think) : ParseFull(json, think);
+                    if (!string.IsNullOrEmpty(answer)) onDelta?.Invoke(answer);
+                }
+                if (string.IsNullOrWhiteSpace(answer))
+                    throw new AiException("empty", reasoning.Length > 0
+                        ? "The model was still thinking when the answer ended (no final text). Try again, raise the answer limit or pick another model."
+                        : "The service returned an empty answer.");
                 return answer;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw new AiException("cancelled", "Cancelled"); }
@@ -119,7 +131,7 @@ public static class AiClient
         }
     }
 
-    static async Task<string> ReadStreamAsync(HttpResponseMessage resp, Action<string>? onDelta, CancellationToken ct)
+    static async Task<string> ReadStreamAsync(HttpResponseMessage resp, Action<string>? onDelta, Action<string>? onReasoning, CancellationToken ct)
     {
         await using var s = await resp.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(s, Encoding.UTF8);
@@ -131,7 +143,7 @@ public static class AiClient
             if (line == null) break;
             if (line.Length == 0)
             {
-                if (data.Length > 0 && Dispatch(data.ToString(), all, onDelta)) break;
+                if (data.Length > 0 && Dispatch(data.ToString(), all, onDelta, onReasoning)) break;
                 data.Clear();
                 continue;
             }
@@ -143,41 +155,87 @@ public static class AiClient
                 data.Append(v);
                 // many servers send one JSON per line without blank separators – dispatch eagerly when it parses
                 if (v == "[DONE]") break;
-                if (LooksComplete(v)) { if (Dispatch(data.ToString(), all, onDelta)) break; data.Clear(); }
+                if (LooksComplete(v)) { if (Dispatch(data.ToString(), all, onDelta, onReasoning)) break; data.Clear(); }
             }
         }
-        if (data.Length > 0) Dispatch(data.ToString(), all, onDelta);
+        if (data.Length > 0) Dispatch(data.ToString(), all, onDelta, onReasoning);
         return all.ToString();
     }
 
     static bool LooksComplete(string v) => v.StartsWith('{') && v.EndsWith('}');
 
+    /// <summary>The first choice, or null. Servers send chunks with "choices": [] (usage, keep-alive) – indexing them must not throw.</summary>
+    public static JsonNode? FirstChoice(JsonNode? n) => n?["choices"] is JsonArray { Count: > 0 } a ? a[0] : null;
+
+    /// <summary>Text of a content field: a plain string, or an array of parts ({type:"text", text}).</summary>
+    public static string? TextOf(JsonNode? v)
+    {
+        switch (v)
+        {
+            case null: return null;
+            case JsonValue jv: return jv.TryGetValue<string>(out var s) ? s : jv.ToJsonString();
+            case JsonArray arr:
+                var sb = new StringBuilder();
+                foreach (var part in arr)
+                    if (part is JsonValue pv && pv.TryGetValue<string>(out var ps)) sb.Append(ps);
+                    else if (part?["text"] is JsonNode tn) sb.Append(tn.ToString());
+                return sb.ToString();
+            default: return v["text"]?.ToString();
+        }
+    }
+
+    /// <summary>Reasoning ("thinking") text of a delta / message: DeepSeek, OpenRouter, Qwen, Ollama and others use different names.</summary>
+    public static string? ReasoningOf(JsonNode? m) =>
+        m == null ? null : TextOf(m["reasoning_content"]) ?? TextOf(m["reasoning"]) ?? TextOf(m["thinking"]);
+
+    public static AiException ServerError(JsonNode err) =>
+        new("server", err is JsonValue ? err.ToString() : err["message"]?.ToString() ?? err.ToJsonString());
+
     /// <returns>true when the stream is finished</returns>
-    static bool Dispatch(string payload, StringBuilder all, Action<string>? onDelta)
+    public static bool Dispatch(string payload, StringBuilder all, Action<string>? onDelta, Action<string>? onReasoning = null)
     {
         if (payload == "[DONE]") return true;
         JsonNode? n;
         try { n = JsonNode.Parse(payload); } catch { return false; }
-        if (n?["error"] is JsonNode err)
-            throw new AiException("server", err["message"]?.ToString() ?? err.ToJsonString());
-        var choice = n?["choices"]?[0];
-        var piece = choice?["delta"]?["content"]?.ToString() ?? choice?["message"]?["content"]?.ToString() ?? choice?["text"]?.ToString();
+        if (n is not JsonObject) return false;
+        if (n["error"] is JsonNode err) throw ServerError(err);
+        var choice = FirstChoice(n);
+        if (choice == null) return false; // usage / keep-alive chunk
+        var delta = choice["delta"] ?? choice["message"];
+        var thought = ReasoningOf(delta);
+        if (!string.IsNullOrEmpty(thought)) onReasoning?.Invoke(thought);
+        var piece = TextOf(delta?["content"]) ?? TextOf(choice["text"]);
         if (!string.IsNullOrEmpty(piece)) { all.Append(piece); onDelta?.Invoke(piece); }
         return false;
     }
 
-    static string ParseFull(string json)
+    /// <summary>A whole SSE body read at once (server ignored the requested mode).</summary>
+    public static string ParseSseText(string body, Action<string>? onDelta, Action<string>? onReasoning)
+    {
+        var all = new StringBuilder();
+        foreach (var raw in body.Split('\n'))
+        {
+            var line = raw.TrimEnd('\r');
+            if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
+            var v = line[5..].TrimStart();
+            if (Dispatch(v, all, null, onReasoning)) break;
+        }
+        return all.ToString();
+    }
+
+    public static string ParseFull(string json, Action<string>? onReasoning = null)
     {
         JsonNode? n;
         try { n = JsonNode.Parse(json); }
         catch { throw new AiException("format", "The server answered with something that is not JSON"); }
-        if (n?["error"] is JsonNode err) throw new AiException("server", err["message"]?.ToString() ?? err.ToJsonString());
-        var c = n?["choices"]?[0];
-        return c?["message"]?["content"]?.ToString() ?? c?["text"]?.ToString()
-            ?? throw new AiException("format", "No answer in the response");
+        if (n?["error"] is JsonNode err) throw ServerError(err);
+        var c = FirstChoice(n) ?? throw new AiException("format", "No answer in the response");
+        var thought = ReasoningOf(c["message"]);
+        if (!string.IsNullOrEmpty(thought)) onReasoning?.Invoke(thought);
+        return TextOf(c["message"]?["content"]) ?? TextOf(c["text"]) ?? "";
     }
 
-    public static AiException MapError(int status, string body)
+    public static AiException MapError(int status, string body, string? model = null)
     {
         string msg = body;
         try
@@ -187,6 +245,10 @@ public static class AiClient
         }
         catch { }
         if (msg.Length > 400) msg = msg[..400] + "…";
+        // "A supported model is required", "model_not_found", "The model `x` does not exist"…
+        if ((status is 400 or 404 or 422) && System.Text.RegularExpressions.Regex.IsMatch(msg, @"\bmodel", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            && System.Text.RegularExpressions.Regex.IsMatch(msg, @"support|exist|not found|invalid|unknown|required|no such|unavailable|not available", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            return new AiException("model", msg + (string.IsNullOrEmpty(model) ? "" : $" [{model}]"), status);
         var code = status switch
         {
             401 or 403 => "auth",

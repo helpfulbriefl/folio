@@ -172,5 +172,102 @@ ChatGPT сказал:
   },
 ];
 
+// English versions of the demo documents (self-test with --selftest-lang=en: the README / site screenshots).
+// Keyed by the Russian file name; the old letter in Windows-1251 and stats.js stay as they are (they show encodings / code).
+const SAMPLES_EN = {
+  'Планы на неделю.md': {
+    path: 'C:\\Users\\Demo\\Documents\\Notes\\Weekly plan.md',
+    text: `# Weekly plan
+
+A short list of what really has to be done by Friday. Everything else — if there is time.
+
+## Work
+- [x] Send the quarterly report
+- [ ] Team call on Wednesday, 11:00
+- [ ] Clear the inbox and **reply to Anna** about the mockups
+- [ ] Update the README — add a section on ==keyboard shortcuts==
+
+## Home
+- Groceries: milk, bread, apples
+- Book a dentist appointment
+- Call mum on Sunday
+
+## Ideas
+1. Make a template for meeting notes
+2. Try the reader for long AI chats
+3. Press \`Ctrl\`+\`K\` and look through all the commands
+
+> Less, but every day.
+`,
+  },
+  'Черновик статьи.txt': {
+    path: 'C:\\Users\\Demo\\Documents\\Article draft.txt',
+    text: `How I stopped being afraid of long texts
+
+Basicaly, writing every day is not that hard. The main thing is not to wait for inspiration , but to just sit down and write.
+
+For a long time I thought I needed the perfect editor. It turned out I needed something else: silence,  half an hour and a clear goal.
+
+Now I write in the mornings while everyone is asleep. Sometimes it is a page, sometimes a paragraph — and that is fine.
+
+PS. I recieve a lot of feedbak from teh readers, and it really helps.
+`,
+  },
+  'Диалог с ChatGPT.md': {
+    path: 'C:\\Users\\Demo\\Downloads\\Chat with ChatGPT.md',
+    text: `You said:
+How do I stop losing my notes? They are everywhere: on my phone, in a notebook, in chats.
+
+ChatGPT said:
+The key is **one place for everything incoming**. Whatever comes to mind goes there right away, and once a day you sort it out.
+
+A simple scheme:
+1. **Inbox** — one file or folder where everything lands.
+2. **Review** — 10 minutes in the evening: delete the noise, file the rest by topic.
+3. **Archive** — everything that is done but may come in handy.
+
+You said:
+How do I jot things down quickly when I am at the computer and do not want to switch windows?
+
+ChatGPT said:
+A global hotkey helps. In Folio it is \`Ctrl+Alt+N\`: a small window pops up, you type the thought and press \`Enter\` — the note is appended to the end of a file with the date.
+
+If you want to automate it, here is a PowerShell example:
+
+\`\`\`powershell
+$note = Read-Host "Note"
+$line = "- $(Get-Date -Format 'HH:mm') $note"
+Add-Content -Path "$HOME\\Documents\\Inbox.md" -Value $line -Encoding utf8
+\`\`\`
+
+You said:
+Thanks! How much time should the review take?
+
+ChatGPT said:
+Usually **10–15 minutes a day** is enough. If there are many notes, review twice: at lunch and in the evening. Regularity matters more than length.
+
+You said:
+Can you sum it up as a list?
+
+ChatGPT said:
+Sure:
+- one place for everything incoming;
+- quick capture with a hotkey;
+- a 10–15 minute review every day;
+- everything done goes to the archive.
+`,
+  },
+};
+
+/** The demo documents for a UI language; each has .key = its Russian file name (the self-test refers to them by it). */
+export function samplesFor(l) {
+  return SAMPLES.map(s => {
+    const key = s.path.split('\\').pop();
+    const en = l !== 'ru' ? SAMPLES_EN[key] : null;
+    return { ...s, ...(en || {}), key };
+  });
+}
+
 /** Replacements the demo AI (browser mock and self-test server) applies for "fix". */
-export const DEMO_FIXES = [['Впринципе', 'В принципе'], ['вдохновения ,', 'вдохновения,'], ['тишина,  полчаса', 'тишина, полчаса'], ['по утрам пока', 'по утрам, пока'], ['recieve', 'receive'], ['feedbak', 'feedback'], ['teh', 'the']];
+export const DEMO_FIXES = [['Впринципе', 'В принципе'], ['вдохновения ,', 'вдохновения,'], ['тишина,  полчаса', 'тишина, полчаса'], ['по утрам пока', 'по утрам, пока'],
+  ['Basicaly', 'Basically'], ['inspiration ,', 'inspiration,'], ['silence,  half', 'silence, half'], ['recieve', 'receive'], ['feedbak', 'feedback'], ['teh', 'the']];

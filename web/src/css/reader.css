@@ -1,9 +1,9 @@
 /* Folio — reader: outline, paged book / feed, pick mode, copy basket */
 .reader{display:flex;height:100%;min-width:0}
-.outline{width:272px;flex:none;border-right:1px solid var(--line);background:var(--side);padding:14px 12px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.outline{width:244px;flex:none;border-right:1px solid var(--line);background:var(--side);padding:10px 10px;display:flex;flex-direction:column;gap:8px;min-height:0}
 .outline .stats{font-size:11.5px;color:var(--muted);padding:0 4px;line-height:1.5}
 .ol{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:1px;margin:0 -4px;padding:0 4px}
-.mi2{display:flex;gap:8px;align-items:flex-start;width:100%;padding:6px 8px;border-radius:8px;color:var(--text-2);font-size:12.5px;line-height:1.38;flex:none;transition:background .12s}
+.mi2{display:flex;gap:8px;align-items:flex-start;width:100%;padding:4px 8px;border-radius:8px;color:var(--text-2);font-size:12.5px;line-height:1.38;flex:none;transition:background .12s}
 .mi2>span:last-child{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mi2:hover{background:var(--hover)}
 .mi2.on{background:var(--active);color:var(--text)}
@@ -17,20 +17,20 @@
 .mi2.h3,.mi2.h4,.mi2.h5,.mi2.h6{padding-left:30px;font-size:12px}
 .ol-empty{padding:18px 8px;color:var(--muted);font-size:12.5px;text-align:center}
 
-.stage{flex:1;min-width:0;position:relative;display:flex;justify-content:center;padding:26px 56px 0;overflow:hidden;outline:none}
-.stage.feed{display:block;overflow-y:auto;padding:26px 56px 60px}
+.stage{flex:1;min-width:0;position:relative;display:flex;justify-content:center;padding:12px 48px 0;overflow:hidden;outline:none}
+.stage.feed{display:block;overflow-y:auto;padding:12px 48px 40px}
 .stack{position:relative;width:100%;max-width:var(--read-w);height:max-content}
-.stack.measure{position:absolute;left:56px;right:56px;top:0;margin:0 auto;visibility:hidden;pointer-events:none}
-.stack .under{position:absolute;inset:7px -7px -7px 7px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
-.stack .under.u2{inset:14px -14px -14px 14px;opacity:.55}
+.stack.measure{position:absolute;left:48px;right:48px;top:0;margin:0 auto;visibility:hidden;pointer-events:none}
+.stack .under{position:absolute;inset:4px -4px -4px 4px;border-radius:14px;background:var(--surface);border:1px solid var(--line);opacity:.7}
 .stack.turn-next .page{animation:turnNext .32s var(--ease)}
 .stack.turn-prev .page{animation:turnPrev .32s var(--ease)}
-.page,.feed-col{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px 44px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.page,.feed-col{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:calc(14px*min(var(--z),1.5)) calc(26px*min(var(--z),1.5));box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.page{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .feed-col{max-width:var(--read-w);margin:0 auto}
 .page-h{display:flex;align-items:center;gap:10px;font:600 10.5px/1 var(--ui);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;white-space:nowrap}
 .page-h>span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .page-h .rule{flex:1;height:1px;background:var(--line);min-width:20px}
-.blk{position:relative;border:1px solid transparent;border-radius:12px;padding:12px 14px;margin:0 -15px 4px;transition:background .15s,border-color .15s}
+.blk{position:relative;border:1px solid transparent;border-radius:10px;padding:8px 12px;margin:0 -13px 2px;transition:background .15s,border-color .15s}
 .blk:last-child{margin-bottom:0}
 .blk:hover{border-color:var(--line-2);background:var(--sunken)}
 .blk.sel{background:color-mix(in srgb,var(--teal-soft) 70%,transparent);box-shadow:inset 3px 0 0 var(--teal)}
@@ -45,7 +45,7 @@
 .bcb.on{background:var(--teal-ink);border-color:var(--teal-ink)}
 html[data-dark="1"] .bcb.on{color:#10231F}
 .bcb svg{width:11px;height:11px;stroke-width:3}
-.blk-body{font:400 calc(var(--read-fs)*var(--z))/var(--read-lh) var(--serif);color:var(--text);padding-left:38px;min-width:0;overflow-wrap:break-word}
+.blk-body{font:400 calc(var(--read-fs)*var(--z))/var(--read-lh) var(--serif);color:var(--text);padding-left:34px;min-width:0;overflow-wrap:break-word}
 html.read-sans .blk-body{font-family:var(--text-font)}
 .picking .blk:not(.doc) .blk-body{padding-left:65px}
 .blk.doc{display:flex;gap:12px;align-items:flex-start}
@@ -61,8 +61,8 @@ html.read-sans .blk-body{font-family:var(--text-font)}
 .turn:active{transform:scale(.94)}
 .turn.l{left:12px}.turn.r{right:12px}
 .turn:disabled{opacity:.3}
-.prog{position:absolute;left:0;right:0;bottom:0;height:40px;display:flex;align-items:center;gap:12px;padding:0 20px;font-size:12px;color:var(--muted);background:linear-gradient(transparent,var(--bg) 40%);z-index:2;font-variant-numeric:tabular-nums}
-.prog .bar{flex:1;height:3px;border-radius:3px;background:var(--line)}
+.prog{position:absolute;left:0;right:0;bottom:0;height:28px;display:flex;align-items:center;gap:10px;padding:0 16px;font-size:11px;color:var(--muted);background:linear-gradient(transparent,var(--bg) 40%);z-index:2;font-variant-numeric:tabular-nums}
+.prog .bar{flex:1;height:2px;border-radius:2px;background:var(--line)}
 .prog .bar i{display:block;height:100%;border-radius:3px;background:var(--text-2);transition:width .3s var(--ease)}
 .r-empty{margin:auto;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);text-align:center;padding-bottom:10vh}
 .r-empty .i{width:30px;height:30px;color:var(--faint);margin-bottom:6px}
@@ -132,4 +132,4 @@ mark.hl{background:var(--marker);color:inherit;border-radius:.25em;padding:.02em
 .tbl th,.tbl td{padding:7px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .tbl th{background:var(--sunken);font-weight:650}
 .tbl tr:last-child td{border-bottom:0}
-@media (max-width:1100px){.outline{width:230px}.stage{padding-left:40px;padding-right:40px}.stage.feed{padding-left:32px;padding-right:32px}.page,.feed-col{padding:22px 30px}.stack.measure{left:40px;right:40px}}
+@media (max-width:1100px){.outline{width:210px}.stage{padding-left:40px;padding-right:40px}.stage.feed{padding-left:28px;padding-right:28px}.page,.feed-col{padding:12px 20px}.stack.measure{left:40px;right:40px}}

@@ -58,10 +58,11 @@ export function applySizes() {
   r.setProperty('--fs', (s.fontSize || 16) + 'px');
   r.setProperty('--code-fs', (s.codeFontSize || 13.5) + 'px');
   r.setProperty('--lh', s.lineHeight || 1.75);
-  r.setProperty('--sheet-w', (s.sheetWidth || 780) + 'px');
+  // zoom scales the whole visible page (its width and margins), not only the letters
+  r.setProperty('--sheet-w', Math.round((s.sheetWidth || 780) * z) + 'px');
   r.setProperty('--read-fs', (s.reader?.fontSize || 16.5) + 'px');
   r.setProperty('--read-lh', s.reader?.lineHeight || 1.66);
-  r.setProperty('--read-w', (s.reader?.width || 760) + 'px');
+  r.setProperty('--read-w', Math.round((s.reader?.width || 860) * z) + 'px');
   document.documentElement.classList.toggle('static', s.animations === false);
   document.documentElement.classList.toggle('read-sans', s.reader?.serif === false);
 }

@@ -11,7 +11,7 @@ import { initTheme, caps } from './theme.js';
 import { docs, restoreSession } from './docs.js';
 import { proofAvailable } from './editor/proof.js';
 import { APP } from './ui/settings-ui.js';
-import { aiState } from './ai/ai.js';
+import { aiState, ensureProfiles } from './ai/ai.js';
 import { initApp, app, openWelcome, sendNativeStrings } from './app.js';
 import { checkUpdates } from './ui/about.js';
 
@@ -39,6 +39,7 @@ async function boot() {
   const init = await host.call('app.init');
   stage('settings');
   settings.load(init.settings || {});
+  ensureProfiles();
   app.locale = init.locale || navigator.language;
   app.primary = init.sys?.primary !== false;
   for (const l of init.langs || []) { try { addLang(l.code, l.name, l.table || {}); } catch (e) { console.warn('lang', l?.code, e); } }

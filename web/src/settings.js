@@ -61,11 +61,14 @@ export const DEFAULTS = {
   welcomeShown: false,
   trayHintShown: false,
   recentMax: 20,
-  reader: { layout: 'book', width: 760, fontSize: 16.5, lineHeight: 1.66, showTime: true, serif: true },
+  tabsMode: 'multi',         // multi | single (opening a file replaces the current tab)
+  colorIcons: true,          // colored file-type icons on tabs (developer-icons)
+  reader: { layout: 'book', width: 900, fontSize: 16.5, lineHeight: 1.66, showTime: true, serif: true },
   copy: { format: 'markdown', names: true, separator: true, lineNumbers: false, time: false },
   ai: {
     provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini',
-    temperature: 0.3, stream: true, context: 'page', answerLang: 'auto', maxChars: 60000, maxTokens: 0,
+    temperature: 0.3, stream: true, context: 'page', answerLang: 'auto', maxChars: 60000, maxTokens: 0, showThinking: true,
+    profiles: [], active: '',  // [{id, name, provider, baseUrl, model, keyId}] – see ai.js
   },
   updates: { auto: true, beta: false },
   keys: {},

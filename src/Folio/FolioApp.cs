@@ -270,7 +270,7 @@ internal sealed class FolioApp : ApplicationContext
                 ["exe"] = Environment.ProcessPath, ["dotnet"] = Environment.Version.ToString(),
             },
             ["spell"] = new JsonObject { ["langs"] = new JsonArray(langs.Select(l => (JsonNode)l).ToArray()) },
-            ["flags"] = new JsonObject { ["firstRun"] = firstRun, ["selftest"] = SelfTestMode, ["compatAuto"] = Options.CompatAuto },
+            ["flags"] = new JsonObject { ["firstRun"] = firstRun, ["selftest"] = SelfTestMode, ["compatAuto"] = Options.CompatAuto, ["selftestLang"] = Options.SelfTestLang },
             ["langs"] = CustomLanguages(),
             ["hasAiKey"] = !string.IsNullOrEmpty(Secrets.Get(SettingString("ai.provider") ?? "openai")),
         };

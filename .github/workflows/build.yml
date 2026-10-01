@@ -55,7 +55,7 @@ jobs:
         id: selftest
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath out\Folio.exe -ArgumentList '--selftest=selftest' -PassThru
+          $p = Start-Process -FilePath out\Folio.exe -ArgumentList '--selftest=selftest','--selftest-lang=en' -PassThru
           $null = $p.Handle
           if (-not $p.WaitForExit(480000)) { Stop-Process -Id $p.Id -Force; "code=timeout" >> $env:GITHUB_OUTPUT; Write-Host 'self-test timed out'; exit 0 }
           $code = $p.ExitCode

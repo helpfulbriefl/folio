@@ -15,12 +15,108 @@ export const PROVIDERS = {
   custom: { name: 'Custom', baseUrl: '', model: '' },
 };
 
-export const aiState = { hasKey: false, checked: false };
+export const aiState = { hasKey: false, checked: false, keys: {}, models: {} };
+
+// ---------- profiles: several connections (service + address + model + its own key), one of them active ----------
+// The active profile is mirrored into ai.provider / ai.baseUrl / ai.model, so the rest of the app reads those as before.
+export const profiles = () => settings.get('ai.profiles') || [];
+export const activeProfile = () => { const l = profiles(); return l.find(p => p.id === settings.get('ai.active')) || l[0] || null; };
+/** Id of the saved key for the active profile (old settings: the provider name). */
+export const keyId = () => activeProfile()?.keyId || settings.get('ai.provider') || 'openai';
+const providerName = id => (id === 'custom' ? '' : PROVIDERS[id]?.name) || hostOf(settings.get('ai.baseUrl')) || 'API';
+const hostOf = u => { try { return new URL(u).hostname.replace(/^(www|api)\./, ''); } catch { return ''; } };
+
+/** Creates the first profile from the old single connection (keeps the key that was saved for that provider). */
+export function ensureProfiles() {
+  const a = settings.get('ai') || {};
+  if (Array.isArray(a.profiles) && a.profiles.length) {
+    if (!a.profiles.some(p => p.id === a.active)) settings.set('ai', { ...structuredClone(a), active: a.profiles[0].id });
+    return;
+  }
+  const id = uid('p');
+  const name = a.provider === 'custom' ? hostOf(a.baseUrl) || 'Custom' : PROVIDERS[a.provider]?.name || 'OpenAI';
+  settings.set('ai', { ...structuredClone(a), active: id, profiles: [{ id, name, provider: a.provider || 'openai', baseUrl: a.baseUrl || '', model: a.model || '', keyId: a.provider || 'openai' }] });
+}
+
+/** ai.provider / baseUrl / model changed (settings, setup card, model menu) → store it in the active profile too. */
+function syncProfile() {
+  const a = settings.get('ai');
+  const list = a?.profiles;
+  if (!Array.isArray(list) || !list.length) return;
+  const i = list.findIndex(p => p.id === a.active);
+  if (i < 0) return; // only ever write into the profile that is really active
+  const p = list[i];
+  if (p.provider === a.provider && p.baseUrl === a.baseUrl && p.model === a.model) return;
+  const next = list.map((x, k) => (k === i ? { ...x, provider: a.provider, baseUrl: a.baseUrl, model: a.model } : x));
+  settings.set('ai.profiles', next, { silent: true });
+}
+settings.on('ai', syncProfile);
+
+export async function useProfile(id) {
+  const p = profiles().find(x => x.id === id);
+  if (!p) return;
+  settings.set('ai', { ...structuredClone(settings.get('ai')), active: id, provider: p.provider, baseUrl: p.baseUrl, model: p.model });
+  await refreshKey();
+}
+
+export function addProfile({ provider = 'openai', name } = {}) {
+  ensureProfiles();
+  const P = PROVIDERS[provider] || PROVIDERS.custom;
+  const id = uid('p');
+  const list = profiles();
+  let base = name || (provider === 'custom' ? 'Custom' : P.name), nm = base, n = 2;
+  while (list.some(x => x.name === nm)) nm = `${base} ${n++}`;
+  const p = { id, name: nm, provider, baseUrl: P.baseUrl, model: P.model, keyId: 'key-' + id };
+  settings.set('ai.profiles', [...list, p]);
+  return useProfile(id).then(() => p);
+}
+
+export function renameProfile(id, name) {
+  if (!name?.trim()) return;
+  settings.set('ai.profiles', profiles().map(p => (p.id === id ? { ...p, name: name.trim().slice(0, 40) } : p)));
+}
+
+export async function removeProfile(id) {
+  const list = profiles();
+  const p = list.find(x => x.id === id);
+  if (!p || list.length < 2) return false;
+  // a key is only deleted when no other profile uses it
+  if (!list.some(x => x.id !== id && x.keyId === p.keyId)) { try { await host.call('ai.setKey', { keyId: p.keyId, provider: p.provider, key: '' }); } catch { } }
+  const rest = list.filter(x => x.id !== id);
+  settings.set('ai.profiles', rest);
+  if (settings.get('ai.active') === id) await useProfile(rest[0].id);
+  return true;
+}
+
+export const profileLabel = p => (p ? p.name || providerName(p.provider) : '');
 
 export async function refreshKey() {
-  try { const r = await host.call('ai.hasKey', { provider: settings.get('ai.provider') }); aiState.hasKey = !!r?.has; } catch { aiState.hasKey = false; }
+  ensureProfiles();
+  const ids = [...new Set(profiles().map(p => p.keyId).filter(Boolean))];
+  try {
+    const r = await host.call('ai.hasKey', { keyId: keyId(), provider: settings.get('ai.provider'), keyIds: ids });
+    aiState.hasKey = !!r?.has;
+    aiState.keys = r?.keys || { [keyId()]: aiState.hasKey };
+  } catch { aiState.hasKey = false; }
   aiState.checked = true;
   return aiState.hasKey;
+}
+
+export async function saveKey(key) {
+  await host.call('ai.setKey', { keyId: keyId(), provider: settings.get('ai.provider'), key });
+  aiState.hasKey = !!key;
+  aiState.keys[keyId()] = !!key;
+  delete aiState.models[modelsCacheKey()];
+}
+
+// ---------- models of the active connection (GET /models with its key), cached per address + key ----------
+const modelsCacheKey = () => (settings.get('ai.baseUrl') || '') + '|' + keyId();
+export const cachedModels = () => aiState.models[modelsCacheKey()] || null;
+export async function loadModels({ force = false } = {}) {
+  const ck = modelsCacheKey();
+  if (!force && aiState.models[ck]) return aiState.models[ck];
+  const r = await host.call('ai.models', { provider: settings.get('ai.provider'), baseUrl: settings.get('ai.baseUrl'), keyId: keyId() });
+  return (aiState.models[ck] = r?.models || []);
 }
 export const needsKey = () => !PROVIDERS[settings.get('ai.provider')]?.noKey;
 export const configured = () => (!needsKey() || aiState.hasKey) && !!settings.get('ai.baseUrl') && !!settings.get('ai.model');
@@ -49,16 +145,33 @@ export function taskPrompt(task, arg) {
 export const EDIT_TASKS = new Set(['fix', 'shorten', 'polite', 'translate', 'continue']);
 
 /** Streams a completion. onDelta(fullTextSoFar). Returns {text, model}. */
-export function complete(messages, { onDelta, signal } = {}) {
+/** Streams a completion. onDelta(answerSoFar), onThink(reasoningSoFar) while the model "thinks". Returns {text, model, thoughts}. */
+export function complete(messages, { onDelta, onThink, signal } = {}) {
   const a = settings.get('ai');
   const id = uid('ai');
-  let acc = '';
-  const off = host.on('ai.delta', d => { if (d.id === id) { acc += d.text; onDelta?.(acc); } });
+  let acc = '', thoughts = '';
+  // reasoning arrives either as separate deltas (reasoning_content) or inline as <think>…</think> at the start of the answer
+  const emit = () => { const s = splitThink(acc); onDelta?.(s.text); if (s.think || thoughts) onThink?.(thoughts + s.think, s.open); };
+  const off = host.on('ai.delta', d => { if (d.id === id) { acc += d.text; emit(); } });
+  const offR = host.on('ai.reasoning', d => { if (d.id === id) { thoughts += d.text; onThink?.(thoughts, true); } });
+  const done = () => { off(); offR(); };
   if (signal) signal.onabort = () => host.send('ai.cancel', { id });
   return host.call('ai.request', {
-    id, provider: a.provider, baseUrl: a.baseUrl, model: a.model, messages,
+    id, provider: a.provider, keyId: keyId(), baseUrl: a.baseUrl, model: (a.model || '').trim(), messages,
     temperature: a.temperature ?? 0.3, stream: a.stream !== false, maxTokens: a.maxTokens || 0,
-  }).then(r => { off(); return { text: r?.text ?? acc, model: r?.model || a.model }; }, e => { off(); throw e; });
+  }).then(r => {
+    done();
+    const s = splitThink(r?.text ?? acc);
+    if (!s.text.trim()) throw Object.assign(new Error(thoughts || s.think ? 'only reasoning, no answer' : 'empty answer'), { code: 'empty' });
+    return { text: s.text, model: r?.model || a.model, thoughts: thoughts + s.think };
+  }, e => { done(); throw e; });
+}
+
+/** "<think>…</think>answer" → {think, text, open}; an unclosed <think> means the model is still thinking. */
+export function splitThink(s) {
+  const m = /^\s*<(think|thinking|reasoning)>([\s\S]*?)(<\/\1>|$)/i.exec(s || '');
+  if (!m) return { think: '', text: s || '', open: false };
+  return { think: m[2].trim(), text: (s.slice(m[0].length)).replace(/^\s+/, ''), open: !m[3] };
 }
 
 /** Cleans a rewritten text: drops code fences / tags models sometimes add around the whole answer. */
