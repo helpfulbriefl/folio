@@ -247,4 +247,23 @@ export default {
   'set.compatMode.restart': 'The change takes effect after a restart',
   'set.restartNow': 'Restart',
   'compat.auto': 'Folio restarted in compatibility mode (no hardware graphics acceleration): with the normal start the window did not show the interface. Turn it off in Settings → Advanced.',
+
+  // ---- 1.1: tabs, file types, AI profiles, support
+  'set.tabsH': 'Tabs', 'set.tabsMode': 'Open files', 'set.tabsMode.multi': 'Keep tabs open', 'set.tabsMode.single': 'Always one tab',
+  'set.tabsMode.h': '“Always one tab”: a new file or note replaces the open tab (Folio asks about unsaved text).',
+  'set.assocH': 'File types', 'set.assoc.default': 'Folio is the default app', 'set.assoc.text': 'Text and Markdown only', 'set.assoc.none': 'Clear all',
+  'set.assoc.defaults': 'Default apps…', 'set.assoc.fail': 'Some file types could not be changed (see the log)',
+  'set.assoc.h': 'Checked types get “Open with → Folio”. Windows only lets you make Folio the default yourself: “Default apps…” or “Open with → Always”.',
+  'set.colorIcons': 'Colored file icons', 'set.colorIcons.h': 'Language icons on tabs and in the status bar',
+  'set.aiProfilesH': 'Profiles', 'set.addProfile': 'New profile', 'set.modelsN': '{n|model|models} on the service: {n}', 'set.modelUnknown': 'This model is not in the service list ({n}) — pick one from the list',
+  'set.pickModel': 'Pick a model from the service list', 'set.reloadModels': 'Reload the model list', 'set.showThinking': 'Show the model’s reasoning',
+  'set.keyOk': 'key', 'set.keyNo': 'no key', 'set.profActive': 'Active', 'set.rename': 'Rename',
+  'set.delProfileQ': 'Delete the profile “{name}”?', 'set.delProfileText': 'Its key is removed from this computer too.', 'set.profSwitched': 'Active profile: {name}', 'set.profAdded': 'Profile “{name}” added — paste its key',
+  'set.support': 'Support', 'set.support.d': 'Source code and a coffee for the author',
+  'set.support.gh': 'Source code, releases, questions and ideas', 'set.support.issue': 'Report a bug',
+  'set.support.coffee': 'Buy me a coffee', 'set.support.coffeeText': 'If Folio is useful to you, you can treat the author to a coffee.', 'set.support.ethNote': 'Ethereum network (ERC-20). Double-check the address before sending.',
+  'set.support.copy': 'Copy address', 'set.support.copied': 'ETH address copied', 'set.support.thanks': 'Thank you for using Folio!',
+  'ai.profileModel': 'Profile and model', 'ai.pickModel': 'Pick a model', 'ai.reasoning': 'Thinking', 'ai.reasoned': 'Reasoning', 'ai.profiles': 'Profiles', 'ai.manageProfiles': 'Manage profiles…',
+  'aiErr.empty.t': 'Empty answer', 'aiErr.empty': 'The model sent no answer text (it may have stopped while still reasoning). Try again or pick another model.',
+  'aiErr.model.t': 'Model not accepted', 'aiErr.model': 'The service does not accept the model “{model}”. Pick a model from the service list.',
 };

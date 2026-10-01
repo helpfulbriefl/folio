@@ -41,10 +41,16 @@ export function initReader(host_) {
   stage.addEventListener('wheel', e => {
     if (e.ctrlKey || st().layout !== 'book') return;
     const page = $('.page', stage);
-    if (page && page.scrollHeight > page.clientHeight + 4) return;
+    // a page taller than the window scrolls first; at its top / bottom edge the wheel turns the page
+    if (page && page.scrollHeight > page.clientHeight + 4) {
+      const atEnd = page.scrollTop + page.clientHeight >= page.scrollHeight - 2, atTop = page.scrollTop <= 1;
+      if (!((e.deltaY > 0 && atEnd) || (e.deltaY < 0 && atTop))) { wheelLock = Date.now(); return; }
+    }
     if (Math.abs(e.deltaY) < 30) return;
     wheelTurn(e.deltaY > 0 ? 1 : -1);
   }, { passive: true });
+  // 1.1: the old default reading width (760 px) made the cards narrow
+  if (!settings.get('reader.v2')) { if (settings.get('reader.width') === 760) settings.set('reader.width', 900, { silent: true }); settings.set('reader.v2', true, { silent: true }); }
   new ResizeObserver(debounce(() => { if (isShown()) layout(true); }, 120)).observe(stage);
   settings.on('reader', () => { if (isShown()) layout(true); });
   settings.on('zoom', () => { if (isShown()) layout(true); });
@@ -81,7 +87,7 @@ function whoOf(b) {
   return '';
 }
 function avatar(b) {
-  if (b.role === 'user') return `<span class="av you">${esc(lang() === 'ru' ? 'ВЫ' : lang() === 'zh' ? '你' : 'YOU')}</span>`;
+  if (b.role === 'user') return `<span class="av you">${esc(lang() === 'ru' ? 'ВЫ' : lang() === 'zh' ? '你' : 'ME')}</span>`;
   const n = whoOf(b);
   return `<span class="av ai">${esc(/gpt/i.test(n) ? 'AI' : n.slice(0, 2).toUpperCase())}</span>`;
 }
@@ -116,7 +122,7 @@ function layout(keep = false) {
     renderOutline(); renderStats(); return;
   }
   if (s.layout === 'feed') {
-    stage.innerHTML = `<div class="feed-col"><div class="page-h"><span>${esc(title())}</span><span class="rule"></span><span>${esc(t(model.kind === 'chat' ? 'reader.nMsgs' : 'reader.nBlocks', { n: model.blocks.length }))}</span></div>${model.blocks.map(blockHTML).join('')}</div>`;
+    stage.innerHTML = `<div class="feed-col">${model.blocks.map(blockHTML).join('')}</div>`;
     pages = [model.blocks.map((_, i) => i)];
     s.page = 0;
     const col = $('.feed-col', stage);
@@ -142,13 +148,17 @@ function layout(keep = false) {
   highlight();
 }
 
+let pageMax = 0;     // px: the page never grows past the stage (a huge block scrolls inside it)
 function paginate(stage) {
-  const measure = el(`<div class="stack measure"><div class="page"><div class="page-h"><span>x</span></div>${model.blocks.map(blockHTML).join('')}</div></div>`);
+  const measure = el(`<div class="stack measure"><div class="page">${model.blocks.map(blockHTML).join('')}</div></div>`);
   stage.append(measure);
   const page = $('.page', measure);
-  const cs = getComputedStyle(page);
-  const avail = stage.clientHeight - 26 - 58 - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - $('.page-h', page).offsetHeight - 22;
-  const hs = $$('.blk', page).map(b => b.offsetHeight + 4);
+  const cs = getComputedStyle(page), ss = getComputedStyle(stage);
+  const progH = 30;
+  pageMax = Math.max(160, stage.clientHeight - parseFloat(ss.paddingTop) - progH - 10);
+  const avail = pageMax - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 2;
+  const gap = parseFloat(getComputedStyle($('.blk', page) || page).marginBottom) || 0;
+  const hs = $$('.blk', page).map(b => b.offsetHeight + gap);
   measure.remove();
   pages = [];
   let cur = [], h = 0;
@@ -166,7 +176,7 @@ function renderPage(anim = true, dir = 1) {
   const idx = pages[s.page] || [];
   const n = pages.length;
   const pct = n > 1 ? Math.round(s.page / (n - 1) * 100) : 100;
-  stage.innerHTML = `<div class="stack ${anim && settings.get('animations') !== false ? (dir > 0 ? 'turn-next' : 'turn-prev') : ''}">${n > 1 ? '<div class="under u2"></div><div class="under"></div>' : ''}<div class="page"><div class="page-h"><span>${esc(title())}</span><span class="rule"></span><span>${esc(t('reader.pageOf', { a: s.page + 1, b: n }))}</span></div>${idx.map(i => blockHTML(model.blocks[i], i)).join('')}</div></div>
+  stage.innerHTML = `<div class="stack ${anim && settings.get('animations') !== false ? (dir > 0 ? 'turn-next' : 'turn-prev') : ''}">${n > 1 ? '<div class="under"></div>' : ''}<div class="page" style="max-height:${pageMax}px">${idx.map(i => blockHTML(model.blocks[i], i)).join('')}</div></div>
     <button class="turn l" ${s.page <= 0 ? 'disabled' : ''} title="${esc(t('reader.prev'))} (←)">${I('chevron-left')}</button><button class="turn r" ${s.page >= n - 1 ? 'disabled' : ''} title="${esc(t('reader.next'))} (→)">${I('chevron-right')}</button>
     <div class="prog"><span>${esc(t('reader.pageOf', { a: s.page + 1, b: n }))}</span><div class="bar"><i style="width:${Math.max(2, pct)}%"></i></div><span>${pct}%</span></div>`;
   rtab.reader.info = t('reader.pageOf', { a: s.page + 1, b: n });

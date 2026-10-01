@@ -241,16 +241,27 @@ internal sealed partial class MainForm
             }
 
             // ---------------------------------------------------------------- AI
-            case "ai.hasKey": return new JsonObject { ["has"] = !string.IsNullOrEmpty(Secrets.Get(S(p, "provider"))) };
+            case "ai.hasKey":
+            {
+                // keyIds: several profiles at once (settings → AI → profiles)
+                if (p["keyIds"] is JsonArray ids)
+                {
+                    var o = new JsonObject();
+                    foreach (var kid in ids.Select(x => x?.ToString()).Where(x => !string.IsNullOrEmpty(x)).Distinct())
+                        o[kid!] = !string.IsNullOrEmpty(Secrets.Get(kid));
+                    return new JsonObject { ["has"] = !string.IsNullOrEmpty(Secrets.Get(KeyId(p))), ["keys"] = o };
+                }
+                return new JsonObject { ["has"] = !string.IsNullOrEmpty(Secrets.Get(KeyId(p))) };
+            }
             case "ai.setKey":
-                Secrets.Set(S(p, "provider"), S(p, "key"));
-                Log.Info(string.IsNullOrEmpty(S(p, "key")) ? $"AI key removed ({S(p, "provider")})" : $"AI key saved ({S(p, "provider")})");
+                Secrets.Set(KeyId(p), S(p, "key"));
+                Log.Info(string.IsNullOrEmpty(S(p, "key")) ? $"AI key removed ({KeyId(p)})" : $"AI key saved ({KeyId(p)})");
                 return true;
             case "ai.models":
             {
                 var provider = S(p, "provider");
                 var baseUrl = S(p, "baseUrl") is { Length: > 0 } u ? u : AiDefaults.BaseUrl(provider);
-                var list = await AiClient.ModelsAsync(baseUrl, Secrets.Get(provider), CancellationToken.None);
+                var list = await AiClient.ModelsAsync(baseUrl, Secrets.Get(KeyId(p)), CancellationToken.None);
                 return new JsonObject { ["models"] = Arr(list) };
             }
             case "ai.request": return await AiRequestAsync(p);
@@ -315,6 +326,11 @@ internal sealed partial class MainForm
             case "sys.openUrl": OpenExternal(S(p, "url")); return true;
             case "sys.openDataDir": OpenFolder(AppPaths.Roaming); return true;
             case "sys.autostart": return new JsonObject { ["ok"] = _app.SetAutostart(B(p, "on")) };
+            case "sys.assoc.get": return FileAssoc.State();
+            case "sys.assoc.set":
+                if (_app.SelfTestMode) return FileAssoc.State();
+                return FileAssoc.Set((p["exts"] as JsonArray)?.Select(x => x?.ToString() ?? "").Where(x => x.Length > 0) ?? Enumerable.Empty<string>());
+            case "sys.assoc.defaults": FileAssoc.OpenDefaultApps(); return true;
             case "sys.hotkeys":
             {
                 var failed = _app.SetHotkeys(S(p, "quickNote"), S(p, "show"));
@@ -533,13 +549,16 @@ internal sealed partial class MainForm
         return new JsonObject { ["path"] = d.FileName };
     }
 
+    /// <summary>Which saved key to use: the AI profile's key id, or (old settings) the provider name.</summary>
+    static string? KeyId(JsonObject p) => S(p, "keyId") is { Length: > 0 } k ? k : S(p, "provider");
+
     async Task<JsonNode?> AiRequestAsync(JsonObject p)
     {
         var id = S(p, "id") ?? Guid.NewGuid().ToString("N");
         var provider = S(p, "provider") ?? "openai";
         var baseUrl = S(p, "baseUrl") is { Length: > 0 } u ? u : AiDefaults.BaseUrl(provider);
-        var key = Secrets.Get(provider);
-        if (string.IsNullOrEmpty(key) && AiDefaults.NeedsKey(provider)) throw new AiException("auth", "No API key saved for " + provider);
+        var key = Secrets.Get(KeyId(p));
+        if (string.IsNullOrEmpty(key) && AiDefaults.NeedsKey(provider)) throw new AiException("auth", "No API key saved for " + (S(p, "keyId") ?? provider));
         var req = new AiRequest
         {
             BaseUrl = baseUrl, ApiKey = key, Model = S(p, "model") ?? "", Stream = B(p, "stream", true),
@@ -554,7 +573,8 @@ internal sealed partial class MainForm
         var sw = Stopwatch.StartNew();
         try
         {
-            var text = await AiClient.CompleteAsync(req, delta => BeginInvokeSafe(() => Emit("ai.delta", new JsonObject { ["id"] = id, ["text"] = delta })), cts.Token);
+            var text = await AiClient.CompleteAsync(req, delta => BeginInvokeSafe(() => Emit("ai.delta", new JsonObject { ["id"] = id, ["text"] = delta })), cts.Token,
+                thought => BeginInvokeSafe(() => Emit("ai.reasoning", new JsonObject { ["id"] = id, ["text"] = thought })));
             Log.Info($"AI {req.Model}: {text.Length} chars in {sw.ElapsedMilliseconds} ms");
             return new JsonObject { ["text"] = text, ["model"] = req.Model };
         }

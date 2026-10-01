@@ -1,6 +1,6 @@
 // Browser stand-in for the Windows host: in-memory files, fake spell checker and a demo AI.
 // Lets the UI run in a normal browser (npm run dev + open dist/index.html) and in UI tests.
-import { SAMPLES, DEMO_FIXES } from './samples.js';
+import { samplesFor, DEMO_FIXES } from './samples.js';
 
 const SINGLE = { 'windows-1251': 1, 'cp866': 'ibm866', 'koi8-r': 1, 'iso-8859-5': 1, 'windows-1252': 1, 'windows-1250': 1 };
 const encMaps = {};
@@ -48,6 +48,8 @@ const store = (k, v) => { try { if (v === undefined) return JSON.parse(localStor
 export function createMockHost(emit) {
   const fs = new Map();
   const now = Date.now();
+  const ql = new URLSearchParams(location.search).get('lang') || navigator.language || 'en';
+  const SAMPLES = samplesFor(/^ru/i.test(ql) ? 'ru' : 'en');
   SAMPLES.forEach((s, i) => fs.set(s.path.toLowerCase(), { path: s.path, bytes: encode(s.text, s.encoding, false), mtime: now - (i + 1) * 3600e3 }));
   const logs = [{ t: new Date().toISOString(), level: 'info', msg: 'Folio (browser preview) started' }];
   const versions = new Map();
@@ -130,8 +132,11 @@ export function createMockHost(emit) {
       return { bad, missing: false };
     },
     'spell.langs': () => ({ langs: ['en-US', 'ru-RU'] }),
-    'ai.hasKey': () => ({ has: !!store('aikey') }),
-    'ai.setKey': p => { store('aikey', p.key ? '***' : null); return true; },
+    'ai.hasKey': p => { const k = store('aikeys') || {}; const id = p.keyId || p.provider; const has = !!k[id] || (!!store('aikey') && !p.keyId); return { has, keys: Object.fromEntries((p.keyIds || []).map(x => [x, !!k[x]])) }; },
+    'ai.setKey': p => { const k = store('aikeys') || {}; const id = p.keyId || p.provider; if (p.key) k[id] = '***'; else delete k[id]; store('aikeys', k); return true; },
+    'sys.assoc.get': () => ({ known: [], registered: store('assoc') || { txt: true, md: true }, isDefault: { txt: true } }),
+    'sys.assoc.set': p => { const r = Object.fromEntries((p.exts || []).map(e => [e, true])); store('assoc', r); return { ok: true, registered: r, isDefault: { txt: !!r.txt } }; },
+    'sys.assoc.defaults': () => true,
     'ai.models': () => ({ models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'o4-mini'] }),
     'ai.cancel': p => { const j = aiJobs.get(p.id); if (j) j.cancel = true; return true; },
     'ai.request': p => mockAi(p, aiJobs, ev),
@@ -185,11 +190,14 @@ function mockAi(p, jobs, ev) {
   else if (task === 'summary') out = '**Кратко:** держать все заметки в одном месте, записывать по горячей клавише и тратить 10–15 минут в день на разбор.';
   else out = 'Это демо-режим без подключения к ИИ. В приложении ответ придёт от выбранной модели. Могу, например, **исправить ошибки**, **сократить** текст или **перевести** его — выберите действие выше.';
   const parts = out.match(/[\s\S]{1,12}/g) || [''];
+  // demo "reasoning" stream, like DeepSeek / OpenRouter reasoning_content
+  const thoughts = /^Task: chat/.test(p.messages?.[0]?.content || '') ? ['The user asks about the document. ', 'Keep it short, use Markdown.'] : [];
   return new Promise((resolve, reject) => {
-    let i = 0;
+    let i = -thoughts.length;
     const tick = () => {
       if (job.cancel) { jobs.delete(p.id); reject({ code: 'cancelled', message: 'cancelled' }); return; }
       if (i >= parts.length) { jobs.delete(p.id); resolve({ text: out, model: p.model || 'demo', usage: { total: out.length } }); return; }
+      if (i < 0) { ev('ai.reasoning', { id: p.id, text: thoughts[thoughts.length + i] }); i++; setTimeout(tick, 400); return; }
       if (p.stream !== false) ev('ai.delta', { id: p.id, text: parts[i] });
       i++;
       setTimeout(tick, 18);

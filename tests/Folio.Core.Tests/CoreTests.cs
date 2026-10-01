@@ -3,6 +3,9 @@ using Folio.Core;
 using Folio.Core.Text;
 using Xunit;
 
+// Fixtures point the static AppPaths at their own temp folder, so test classes must not run in parallel.
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace Folio.Core.Tests;
 
 public class Fixture : IDisposable
@@ -236,6 +239,29 @@ public class MiscTests
         var e = AiClient.MapError(401, "{\"error\":{\"message\":\"Invalid API key\"}}");
         Assert.Equal("auth", e.Code);
         Assert.Equal("Invalid API key", e.Message);
+        var m = AiClient.MapError(400, "{\"error\":{\"message\":\"A supported model is required.\"}}", "deepseek-v4-flash-free");
+        Assert.Equal("model", m.Code);
+    }
+
+    // 1.0.1: "Index was out of range" — a stream chunk with "choices": [] (usage / keep-alive) was indexed with [0]
+    [Fact]
+    public void AiStreamChunks()
+    {
+        var all = new StringBuilder();
+        var thoughts = new StringBuilder();
+        Assert.False(AiClient.Dispatch("{\"choices\":[{\"delta\":{\"reasoning_content\":\"hmm \"}}]}", all, null, t => thoughts.Append(t)));
+        Assert.False(AiClient.Dispatch("{\"choices\":[{\"delta\":{\"content\":\"Hel\"}}]}", all, null));
+        Assert.False(AiClient.Dispatch("{\"choices\":[{\"delta\":{\"content\":[{\"type\":\"text\",\"text\":\"lo\"}]}}]}", all, null));
+        Assert.False(AiClient.Dispatch("{\"choices\":[],\"usage\":{\"total_tokens\":5}}", all, null));
+        Assert.False(AiClient.Dispatch("{\"id\":\"x\"}", all, null));
+        Assert.False(AiClient.Dispatch("[1,2]", all, null));
+        Assert.True(AiClient.Dispatch("[DONE]", all, null));
+        Assert.Equal("Hello", all.ToString());
+        Assert.Equal("hmm ", thoughts.ToString());
+        Assert.Throws<AiException>(() => AiClient.Dispatch("{\"error\":{\"message\":\"bad\"}}", all, null));
+        Assert.Equal("ok", AiClient.ParseFull("{\"choices\":[{\"message\":{\"content\":\"ok\",\"reasoning\":\"r\"}}]}"));
+        Assert.Throws<AiException>(() => AiClient.ParseFull("{\"choices\":[]}"));
+        Assert.Equal("ab", AiClient.ParseSseText("data: {\"choices\":[{\"delta\":{\"content\":\"a\"}}]}\r\n\r\ndata: {\"choices\":[]}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"b\"}}]}\n\ndata: [DONE]\n", null, null));
     }
 }
 

@@ -18,7 +18,7 @@ import { closeSide } from './ui/side.js';
 import { openSettings } from './ui/settings-ui.js';
 import { openAbout } from './ui/about.js';
 import { aiState } from './ai/ai.js';
-import { SAMPLES } from './samples.js';
+import { samplesFor } from './samples.js';
 import { openWelcome, setView, setMode } from './app.js';
 
 const R = { started: new Date().toISOString(), ua: navigator.userAgent, checks: [], shots: [], errors: [], steps: [] };
@@ -60,17 +60,18 @@ export async function runSelfTest(init) {
   settings.set('animations', false);
   settings.set('updates.auto', false);
   settings.set('theme', 'paper');
-  // the sample documents are Russian, so the screenshots use the Russian interface
+  // --selftest-lang=en (CI): English interface and English demo documents for the README / site screenshots
   settings.set('lang', init?.flags?.selftestLang || 'ru');
+  const SAMPLE_LIST = samplesFor(lang());
   await sleep(150);
   const paths = {};
 
   await step('samples', async () => {
-    for (const s of SAMPLES) {
+    for (const s of SAMPLE_LIST) {
       const r = await host.call('selftest.writeFile', { path: s.path, text: s.text, encoding: s.encoding, bom: false });
-      paths[s.path.split('\\').pop()] = r?.path || s.path;
+      paths[s.key] = r?.path || s.path;
     }
-    check('samples.written', Object.keys(paths).length === SAMPLES.length, Object.values(paths).join(' | '));
+    check('samples.written', Object.keys(paths).length === SAMPLE_LIST.length, Object.values(paths).join(' | '));
   });
 
   await step('welcome', async () => {
@@ -154,7 +155,7 @@ export async function runSelfTest(init) {
       acceptAll();
       await sleep(300);
       const txt = editor.text();
-      check('ai.accepted', txt.includes('В принципе') && txt.includes('receive') && !txt.includes('recieve'), txt.slice(0, 80));
+      check('ai.accepted', (txt.includes('В принципе') || txt.includes('Basically')) && txt.includes('receive') && !txt.includes('recieve'), txt.slice(0, 80));
     }
     closeSide();
   });
@@ -234,7 +235,8 @@ export async function runSelfTest(init) {
 
   await step('dark-proof', async () => {
     settings.set('theme', 'graphite');
-    const tab = byName('Черновик');
+    const draft = (paths['Черновик статьи.txt'] || '').split('\\').pop();
+    const tab = byName(draft || 'Черновик');
     if (tab) (await import('./docs.js')).activateTab(tab);
     setMode('proof');
     await sleep(900);

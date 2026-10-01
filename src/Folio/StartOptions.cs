@@ -2,12 +2,12 @@ using System.Text.Json.Nodes;
 
 namespace Folio;
 
-/// <summary>Command line: Folio.exe [files…] [--new-window] [--tray] [--quick-note] [--selftest[=dir]] [--devtools] [--compat]</summary>
+/// <summary>Command line: Folio.exe [files…] [--new-window] [--tray] [--quick-note] [--selftest[=dir]] [--selftest-lang=en|ru|zh] [--devtools] [--compat]</summary>
 internal sealed class StartOptions
 {
     public List<string> Files { get; } = new();
     public bool NewWindow, Tray, QuickNote, SelfTest, Restarted, DevTools, Fresh, Autostart, Compat, CompatAuto;
-    public string? SelfTestOut;
+    public string? SelfTestOut, SelfTestLang;
     public string Cwd = Environment.CurrentDirectory;
 
     public static StartOptions Parse(IEnumerable<string> args)
@@ -30,6 +30,7 @@ internal sealed class StartOptions
                     case "autostart": o.Autostart = true; break;
                     case "quick-note": case "quicknote": o.QuickNote = true; break;
                     case "selftest": o.SelfTest = true; o.SelfTestOut = v; break;
+                    case "selftest-lang": o.SelfTestLang = v is "ru" or "en" or "zh" ? v : null; break;
                     case "restarted": case "updated": o.Restarted = true; break;
                     case "devtools": o.DevTools = true; break;
                     case "fresh": o.Fresh = true; break;

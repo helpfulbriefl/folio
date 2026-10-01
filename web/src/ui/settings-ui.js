@@ -6,7 +6,7 @@ import { host } from '../host.js';
 import { modal, toast, confirm, prompt } from './dialogs.js';
 import { openMenu } from './menu.js';
 import { allCommands, titleOf, keysOf, prettyKeys, rebuildKeymap, eventKey, getCommand, altKeys } from '../commands.js';
-import { PROVIDERS, aiState, refreshKey, complete } from '../ai/ai.js';
+import { PROVIDERS, aiState, refreshKey, complete, profiles, activeProfile, useProfile, addProfile, renameProfile, removeProfile, profileLabel, saveKey, loadModels, cachedModels, keyId } from '../ai/ai.js';
 import { THEMES } from './menus.js';
 import { keyCaps } from './tools.js';
 import { clearSpellCache } from '../editor/proof.js';
@@ -15,8 +15,13 @@ export const APP = { version: '1.0.0', sys: {}, spellLangs: [], fonts: null };
 
 const SECTIONS = [
   ['general', 'settings-2'], ['appearance', 'palette'], ['editor', 'pen-line'], ['reader', 'book-open'], ['encodings', 'file-code'],
-  ['proof', 'spell-check'], ['ai', 'sparkles'], ['keys', 'keyboard'], ['updates', 'refresh-cw'], ['advanced', 'wrench'],
+  ['proof', 'spell-check'], ['ai', 'sparkles'], ['keys', 'keyboard'], ['updates', 'refresh-cw'], ['advanced', 'wrench'], ['support', 'coffee'],
 ];
+export const REPO_URL = 'https://github.com/helpfulbriefl/folio';
+export const ETH_ADDRESS = '0x50153B5CC3eae905291d62602226C80896Aa64f2';
+const ASSOC_MAIN = ['txt', 'md', 'markdown', 'log', 'json', 'jsonc', 'xml', 'yaml', 'yml', 'ini', 'cfg', 'conf', 'csv', 'tsv', 'toml', 'nfo', 'srt'];
+const ASSOC_CODE = ['js', 'ts', 'css', 'html', 'py', 'cs', 'sql', 'ps1', 'bat', 'sh'];
+let assoc = null; // {registered: {ext: bool}, isDefault: {ext: bool}}
 const EMBEDDED = { ui: ['Inter'], text: ['Inter', 'Literata', 'JetBrains Mono'], mono: ['JetBrains Mono'], read: ['Literata', 'Inter'] };
 const ENC_OPTS = ['utf-8', 'utf-16le', 'windows-1251', 'cp866', 'koi8-r', 'windows-1252', 'windows-1250', 'gb18030', 'big5', 'shift_jis', 'euc-kr'];
 
@@ -76,13 +81,15 @@ const pct = v => Math.round(v * 100) + '%';
 const SEC = {
   general: () => sec('set.langH', sel('lang', [['auto', t('lang.auto')], ...Object.entries(LANG_NAMES)])) +
     sec('set.startH', grid(tg('restoreSession'), tg('hotExit'), tg('closeToTray'), tg('trayIcon'), tg('startWithWindows'), tg('startMinimized'), tg('escToTray'))) +
+    sec('set.tabsH', sel('tabsMode', [['multi', t('set.tabsMode.multi')], ['single', t('set.tabsMode.single')]]) + `<p class="hint">${I('info', 'xs')}${esc(t('set.tabsMode.h'))}</p>`) +
+    sec('set.assocH', assocHTML()) +
     sec('set.saveH', sel('autosave', [['off', t('set.autosave.off')], ['focus', t('set.autosave.focus')], ['30s', t('set.autosave.30s')]]) + slider('recentMax', 5, 50, 1)) +
     sec('set.notesH', `<div class="frow"><span class="lb">${esc(t('set.hotkeyQuickNote'))}</span><button class="keycap" data-hk="hotkeyQuickNote">${keyCaps(val('hotkeyQuickNote') || '—')}</button><span class="pv">${esc(t('set.global'))}</span></div>
       <div class="frow"><span class="lb">${esc(t('set.hotkeyShow'))}</span><button class="keycap" data-hk="hotkeyShow">${keyCaps(val('hotkeyShow') || '—')}</button><span class="pv">${esc(t('set.global'))}</span></div>` +
       txt('quickNotesFile', { placeholder: (APP.sys.notesDir || 'Documents\\Folio') + '\\' + t('qn.defaultFile'), btn: `<button class="btn ghost sm" data-act="pickNotes">${esc(t('set.browse'))}</button>` })),
 
   appearance: () => sec('set.themeH', `<div class="themes">${THEMES.map(([id]) => themeCard(id)).join('')}</div>` +
-      grid(tg('systemTheme', { label: t('theme.system'), hint: false }), tg('smoothTheme'), tg('animations'))) +
+      grid(tg('systemTheme', { label: t('theme.system'), hint: false }), tg('smoothTheme'), tg('animations'), tg('colorIcons'))) +
     (val('theme') === 'system' ? sec('', sel('themeLight', [['paper', t('theme.paper')], ['sepia', t('theme.sepia')], ['glass', t('theme.glass')]]) + sel('themeDark', [['graphite', t('theme.graphite')]])) : '') +
     sec('set.fontsH', fontRow('fontUi', 'ui') + fontRow('fontText', 'text') + fontRow('fontMono', 'mono') + fontRow('fontRead', 'read')) +
     sec('set.sizesH', slider('fontSize', 12, 26, 0.5, v => v + ' px') + slider('lineHeight', 1.2, 2.2, 0.05, v => (+v).toFixed(2)) + slider('sheetWidth', 560, 1400, 20, v => v + ' px') + slider('codeFontSize', 10, 22, 0.5, v => v + ' px') +
@@ -93,7 +100,7 @@ const SEC = {
       sel('defaultMode', [['auto', t('set.defaultMode.auto')], ['standard', t('mode.standard')], ['coder', t('mode.coder')], ['proof', t('mode.proof')]])),
 
   reader: () => sec('set.readLayoutH', sel('reader.layout', [['book', t('reader.book')], ['feed', t('reader.feed')]], { label: t('set.readLayout') }) +
-      slider('reader.width', 560, 1100, 20, v => v + ' px', { label: t('set.readWidth') }) + slider('reader.fontSize', 13, 24, 0.5, v => v + ' px', { label: t('set.readFont') }) +
+      slider('reader.width', 560, 1600, 20, v => v + ' px', { label: t('set.readWidth') }) + slider('reader.fontSize', 13, 24, 0.5, v => v + ' px', { label: t('set.readFont') }) +
       slider('reader.lineHeight', 1.3, 2.1, 0.02, v => (+v).toFixed(2), { label: t('set.readLh') }) +
       grid(tg('reader.serif', { label: t('set.readSerif'), hint: false }), tg('reader.showTime', { label: t('set.readTime'), hint: false }))) +
     sec('set.copyH', sel('copy.format', [['markdown', t('fmt.markdown')], ['plain', t('fmt.plain')], ['quote', t('fmt.quote')]], { label: t('set.copyFormat') }) +
@@ -110,16 +117,24 @@ const SEC = {
 
   ai: () => {
     const p = val('ai.provider'), P = PROVIDERS[p] || PROVIDERS.custom;
-    return sec('set.aiConnH', sel('ai.provider', Object.entries(PROVIDERS).map(([id, x]) => [id, id === 'custom' ? t('ai.custom') : x.name, x.local ? t('ai.local') : '']), { label: t('ai.provider') }) +
+    const act = activeProfile();
+    const models = cachedModels();
+    const model = val('ai.model') || '';
+    const known = models && models.length ? models.includes(model) : null;
+    const modelNote = !models ? '' : !models.length ? t('set.noModels') : known ? t('set.modelsN', { n: models.length }) : t('set.modelUnknown', { n: models.length });
+    return sec('set.aiProfilesH', `<div class="profs">${profiles().map(profHTML).join('')}<button class="prof add" data-act="addProfile">${I('plus', 'sm')}<span>${esc(t('set.addProfile'))}</span></button></div>`) +
+      sec('', `<h3>${esc(t('set.aiConnH'))} · <span class="prof-nm">${esc(profileLabel(act))}</span></h3>` +
+      sel('ai.provider', Object.entries(PROVIDERS).map(([id, x]) => [id, id === 'custom' ? t('ai.custom') : x.name, x.local ? t('ai.local') : '']), { label: t('ai.provider') }) +
       txt('ai.baseUrl', { label: t('ai.baseUrl'), placeholder: 'https://…/v1' }) +
-      txt('ai.model', { label: t('ai.model'), btn: `<button class="btn ghost sm" data-act="models">${esc(t('set.list'))}</button>` }) +
       (P.noKey ? '' : `<div class="frow wide"><span class="lb">${esc(t('ai.key'))}</span><input class="inp" type="password" data-key placeholder="${esc(aiState.hasKey ? t('ai.keySaved') : 'sk-…')}" autocomplete="off" spellcheck="false"><button class="btn ghost sm" data-act="saveKey">${esc(t('set.save'))}</button>${aiState.hasKey ? `<button class="btn ghost sm" data-act="delKey">${esc(t('set.remove'))}</button>` : ''}</div>`) +
+      `<div class="frow wide"><span class="lb">${esc(t('ai.model'))}</span><div class="combo"><input class="inp" data-tx="ai.model" data-model-in value="${esc(model)}" placeholder="${esc(P.model || 'model-id')}" spellcheck="false" autocomplete="off"><button class="combo-b" data-act="models" title="${esc(t('set.pickModel'))}">${I('chevron-down', 'sm')}</button></div><button class="icon-btn" data-act="reloadModels" title="${esc(t('set.reloadModels'))}">${I('refresh-cw', 'sm')}</button></div>` +
+      `<div class="frow"><span class="lb"></span><span class="pv model-note ${known === false ? 'warn' : ''}" data-model-note>${esc(modelNote)}</span><span></span></div>` +
       `<div class="frow"><span class="lb"></span><button class="btn soft sm" data-act="testAi">${I('plug-zap', 'xs')}${esc(t('set.testAi'))}</button><span class="pv" data-test-res>${esc(aiState.hasKey || P.noKey ? '' : t('ai.noKey'))}</span></div>`) +
       sec('set.aiBehH', slider('ai.temperature', 0, 1.5, 0.05, v => (+v).toFixed(2), { label: t('set.temperature') }) +
         sel('ai.answerLang', [['auto', t('set.answer.auto')], ['ui', t('set.answer.ui')], ['Russian', 'Русский'], ['English', 'English'], ['Simplified Chinese', '中文']], { label: t('set.answerLang') }) +
         sel('ai.context', [['page', t('ai.ctxDoc')], ['none', t('ai.ctxNone')]], { label: t('set.aiContext') }) +
         sel('ai.maxChars', [[20000, '20 000'], [60000, '60 000'], [120000, '120 000'], [400000, '400 000']], { label: t('set.maxChars') }) +
-        grid(tg('ai.stream', { label: t('set.stream'), hint: false }))) +
+        grid(tg('ai.stream', { label: t('set.stream'), hint: false }), tg('ai.showThinking', { label: t('set.showThinking'), hint: false }))) +
       `<p class="hint">${I('lock', 'xs')}${esc(t('ai.privacy'))}</p>`;
   },
 
@@ -134,7 +149,32 @@ const SEC = {
     sec('set.renderH', grid(tg('compatMode'))) +
     sec('set.backupH', `<div class="btn-row"><button class="btn ghost" data-act="export">${I('download', 'sm')}${esc(t('set.export'))}</button><button class="btn ghost" data-act="import">${I('upload', 'sm')}${esc(t('set.import'))}</button><button class="btn ghost" data-act="exportLang">${I('languages', 'sm')}${esc(t('set.langTemplate'))}</button></div>`) +
     sec('set.dangerH', `<div class="btn-row"><button class="btn danger" data-act="resetAll">${I('rotate-ccw', 'sm')}${esc(t('set.resetAll'))}</button></div>`),
+
+  support: () => sec('', `<div class="card sup-card"><div class="sup-ic gh">${I('github')}</div><div class="sup-b"><b>GitHub</b><span>${esc(t('set.support.gh'))}</span><code class="path">${esc(REPO_URL.replace('https://', ''))}</code></div><div class="sup-acts"><button class="btn primary sm" data-act="openRepo">${I('external-link', 'xs')}${esc(t('set.open'))}</button><button class="btn ghost sm" data-act="openIssues">${I('bug', 'xs')}${esc(t('set.support.issue'))}</button></div></div>`) +
+    sec('', `<div class="card sup-card coffee"><div class="sup-ic cf">${I('coffee')}</div><div class="sup-b"><b>${esc(t('set.support.coffee'))}</b><span>${esc(t('set.support.coffeeText'))}</span><span class="eth"><span class="eth-l">ETH</span><code class="path" data-eth>${esc(ETH_ADDRESS)}</code></span><small class="mut">${esc(t('set.support.ethNote'))}</small></div><div class="sup-acts"><button class="btn primary sm" data-act="copyEth">${I('copy', 'xs')}${esc(t('set.support.copy'))}</button></div></div>`) +
+    `<p class="hint">${I('heart', 'xs')}${esc(t('set.support.thanks'))}</p>`,
 };
+
+function profHTML(p) {
+  const on = p.id === activeProfile()?.id;
+  const P = PROVIDERS[p.provider] || PROVIDERS.custom;
+  const svc = p.provider === 'custom' ? (hostName(p.baseUrl) || t('ai.custom')) : P.name;
+  const key = P.noKey ? `<span class="badge b-gray">${esc(t('ai.local'))}</span>` : aiState.keys[p.keyId] ? `<span class="badge b-teal">${I('key-round', 'xs')}${esc(t('set.keyOk'))}</span>` : `<span class="badge b-coral">${I('key-round', 'xs')}${esc(t('set.keyNo'))}</span>`;
+  return `<div class="prof ${on ? 'on' : ''}" data-prof="${esc(p.id)}" role="radio" aria-checked="${on}"><span class="rd"></span><span class="pb"><b>${esc(profileLabel(p))}</b><small>${esc(svc)} · ${esc(p.model || '—')}</small></span>${key}${on ? `<span class="badge b-sky">${esc(t('set.profActive'))}</span>` : ''}<span class="pa"><button class="icon-btn xs" data-prof-ren="${esc(p.id)}" title="${esc(t('set.rename'))}">${I('pencil', 'xs')}</button>${profiles().length > 1 ? `<button class="icon-btn xs" data-prof-del="${esc(p.id)}" title="${esc(t('set.remove'))}">${I('trash-2', 'xs')}</button>` : ''}</span></div>`;
+}
+const hostName = u => { try { return new URL(u).hostname.replace(/^(www|api)\./, ''); } catch { return ''; } };
+
+function assocHTML() {
+  const chip = e => `<button class="chip ${assoc?.registered?.[e] ? 'on' : ''}" data-assoc="${e}" ${assoc ? '' : 'disabled'}>.${esc(e)}${assoc?.isDefault?.[e] ? `<span class="dflt" title="${esc(t('set.assoc.default'))}">${I('circle-check', 'xs')}</span>` : ''}</button>`;
+  return `<div class="langs assoc">${ASSOC_MAIN.map(chip).join('')}</div><div class="langs assoc code">${ASSOC_CODE.map(chip).join('')}</div>
+    <div class="btn-row"><button class="btn ghost sm" data-act="assocText">${esc(t('set.assoc.text'))}</button><button class="btn ghost sm" data-act="assocNone">${esc(t('set.assoc.none'))}</button><span class="grow"></span><button class="btn soft sm" data-act="assocDefaults">${I('external-link', 'xs')}${esc(t('set.assoc.defaults'))}</button></div>
+    <p class="hint">${I('info', 'xs')}${esc(t('set.assoc.h'))}</p>`;
+}
+async function setAssoc(exts) {
+  try { const r = await host.call('sys.assoc.set', { exts }); if (r) assoc = r; if (r && r.ok === false) toast(t('set.assoc.fail'), { kind: 'err', icon: 'triangle-alert' }); } catch (e) { toast(e.message, { kind: 'err', icon: 'triangle-alert' }); }
+  renderSection();
+}
+const assocOn = () => Object.keys(assoc?.registered || {}).filter(e => assoc.registered[e]);
 
 const encN = e => ({ 'utf-8': 'UTF-8', 'utf-16le': 'UTF-16 LE', 'windows-1251': 'Windows-1251', cp866: 'CP866', 'koi8-r': 'KOI8-R', 'windows-1252': 'Windows-1252', 'windows-1250': 'Windows-1250', gb18030: 'GB18030', big5: 'Big5', shift_jis: 'Shift-JIS', 'euc-kr': 'EUC-KR' }[e] || e);
 
@@ -189,9 +229,20 @@ function wire(body) {
   });
   on(body, 'click', '[data-dict-rm]', (e, b) => { settings.set('dictionary', (val('dictionary') || []).filter(w => w !== b.dataset.dictRm)); host.send('dict.save', { words: val('dictionary') }); clearSpellCache(); renderSection(); });
   on(body, 'click', '[data-act]', (e, b) => ACT[b.dataset.act]?.(b, body));
+  on(body, 'click', '[data-prof]', async (e, b) => {
+    const ren = e.target.closest('[data-prof-ren]'), del = e.target.closest('[data-prof-del]');
+    if (ren) { const p = profiles().find(x => x.id === ren.dataset.profRen); const v = await prompt({ title: t('set.rename'), value: profileLabel(p) }); if (v) { renameProfile(p.id, v); renderSection(); } return; }
+    if (del) { const p = profiles().find(x => x.id === del.dataset.profDel); if (await confirm({ title: t('set.delProfileQ', { name: profileLabel(p) }), text: t('set.delProfileText'), ok: t('set.remove'), danger: true, icon: 'trash-2' })) { await removeProfile(p.id); await refreshKey(); renderSection(); } return; }
+    if (b.dataset.prof !== activeProfile()?.id) { await useProfile(b.dataset.prof); renderSection(); toast(t('set.profSwitched', { name: profileLabel(activeProfile()) }), { icon: 'sparkles' }); }
+  });
+  on(body, 'click', '[data-assoc]', (e, b) => { const x = b.dataset.assoc; const cur = assocOn(); setAssoc(cur.includes(x) ? cur.filter(y => y !== x) : [...cur, x]); });
+  body.querySelector('[data-model-in]')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } if (e.key === 'ArrowDown') { e.preventDefault(); ACT.models(body.querySelector('[data-act=models]'), body); } });
   const dictIn = body.querySelector('[data-dict-in]');
   dictIn?.addEventListener('keydown', e => { if (e.key === 'Enter') ACT.dictAdd(null, body); });
 }
+
+const mi = (m, cur) => ({ label: m, checked: m === cur, run: () => { settings.set('ai.model', m); renderSection(); } });
+const P_NOKEY = id => !!PROVIDERS[id]?.noKey;
 
 function fontItem(k, f) { return { label: f, checked: val(k) === f, cls: 'font-mi', html: undefined, run: () => { settings.set(k, f); renderSection(); } }; }
 
@@ -199,19 +250,22 @@ function afterSet(k) {
   if (k === 'startWithWindows') host.call('sys.autostart', { on: !!val(k) }).then(r => { if (r && r.ok === false) toast(t('set.autostartFail'), { kind: 'err', icon: 'triangle-alert' }); });
   if (k === 'trayIcon' || k === 'closeToTray') host.send('sys.tray', { icon: val('trayIcon') !== false, closeToTray: val('closeToTray') !== false });
   if (k === 'lang') setTimeout(renderSection, 30);
-  if (k === 'ai.provider') { const P = PROVIDERS[val('ai.provider')]; if (P && val('ai.provider') !== 'custom') { settings.set('ai.baseUrl', P.baseUrl); settings.set('ai.model', P.model); } refreshKey().then(() => renderSection()); }
+  if (k === 'ai.provider') { const P = PROVIDERS[val('ai.provider')]; if (P && val('ai.provider') !== 'custom') { settings.set('ai.baseUrl', P.baseUrl); settings.set('ai.model', P.model); } refreshKey().then(() => { renderSection(); autoModels(); }); }
+  if (k === 'ai.baseUrl') autoModels();
+  if (k === 'ai.model') renderSection();
   if (k === 'punctuation' || k === 'spellInStandard') clearSpellCache();
   if (k === 'compatMode') toast(t('set.compatMode.restart'), { icon: 'refresh-cw', ms: 8000, action: { label: t('set.restartNow'), run: () => { settings.flush(); setTimeout(() => host.send('app.restart'), 150); } } });
 }
 
 function resetSection(s) {
   const keys = {
-    general: ['lang', 'restoreSession', 'hotExit', 'closeToTray', 'trayIcon', 'startMinimized', 'escToTray', 'autosave', 'recentMax', 'hotkeyQuickNote', 'hotkeyShow', 'quickNotesFile'],
+    general: ['lang', 'tabsMode', 'restoreSession', 'hotExit', 'closeToTray', 'trayIcon', 'startMinimized', 'escToTray', 'autosave', 'recentMax', 'hotkeyQuickNote', 'hotkeyShow', 'quickNotesFile'],
     appearance: ['theme', 'themeLight', 'themeDark', 'smoothTheme', 'animations', 'fontUi', 'fontText', 'fontMono', 'fontRead', 'fontSize', 'lineHeight', 'sheetWidth', 'codeFontSize', 'uiScale'],
     editor: ['wrap', 'wrapCode', 'lineNumbers', 'lineNumbersCode', 'minimap', 'toc', 'statusBar', 'highlightLine', 'wheelZoom', 'autoPairs', 'insertSpaces', 'markdownInTxt', 'tabSize', 'defaultMode'],
     reader: ['reader', 'copy'], encodings: ['encDefault', 'bomDefault', 'eolDefault', 'fallbackEncoding', 'legacyBanner'],
     proof: ['spellLangs', 'punctuation', 'spellInStandard'], ai: ['ai'], keys: ['keys'], updates: ['updates'], advanced: [],
   }[s] || [];
+  if (s === 'ai') { const a = settings.get('ai'); const p = activeProfile(); settings.set('ai', { ...structuredClone(DEFAULTS.ai), profiles: a.profiles, active: a.active, provider: p?.provider ?? a.provider, baseUrl: p?.baseUrl ?? a.baseUrl, model: p?.model ?? a.model }); return; }
   for (const k of keys) settings.set(k, structuredClone(DEFAULTS[k]));
   if (s === 'keys') rebuildKeymap();
   if (s === 'general') host.send('sys.hotkeys', { quickNote: val('hotkeyQuickNote'), show: val('hotkeyShow') });
@@ -261,7 +315,18 @@ async function apply(c, k) {
 }
 
 // ---------- per-section post-render ----------
+/** Pulls the model list of the active profile in the background (once per address + key) and refreshes the hint. */
+async function autoModels(force = false) {
+  const P = PROVIDERS[val('ai.provider')] || PROVIDERS.custom;
+  if (!val('ai.baseUrl') || (!P.noKey && !aiState.hasKey)) return;
+  if (!force && cachedModels()) return;
+  try { await loadModels({ force }); } catch { aiState.models[(val('ai.baseUrl') || '') + '|' + keyId()] = []; }
+  if (dlg && section === 'ai') renderSection();
+}
+
 const AFTER = {
+  general: () => { if (!assoc) host.call('sys.assoc.get').then(r => { assoc = r || { registered: {}, isDefault: {} }; if (dlg && section === 'general') renderSection(); }).catch(() => { }); },
+  ai: () => { if (!aiState.checked) refreshKey().then(() => { if (dlg && section === 'ai') renderSection(); }); else autoModels(); },
   keys: body => {
     const inp = $('[data-kq]', body);
     const list = $('.klist', body);
@@ -282,14 +347,31 @@ const AFTER = {
 const ACT = {
   async pickNotes() { const r = await host.call('file.saveDialog', { name: t('qn.defaultFile'), dir: APP.sys.notesDir || '', encoding: 'utf-8', noOverwritePrompt: true }); if (r?.path) { settings.set('quickNotesFile', r.path); renderSection(); } },
   dictAdd(b, body) { const i = body.querySelector('[data-dict-in]'); const w = i.value.trim(); if (!w) return; const d = val('dictionary') || []; if (!d.includes(w)) settings.set('dictionary', [...d, w].sort((a, b2) => a.localeCompare(b2))); host.send('dict.save', { words: val('dictionary') }); clearSpellCache(); renderSection(); setTimeout(() => $('[data-dict-in]')?.focus(), 20); },
-  async models(b) {
+  async models(b, body) {
     let models = [];
-    try { models = (await host.call('ai.models', { provider: val('ai.provider'), baseUrl: val('ai.baseUrl') }))?.models || []; } catch (e) { toast(e.message, { kind: 'err', icon: 'triangle-alert' }); return; }
+    b?.classList.add('busy');
+    try { models = await loadModels(); } catch (e) { toast((t('aiErr.' + (e.code || 'error')) || '') + (e.message ? ` (${e.message})` : ''), { kind: 'err', icon: 'triangle-alert', ms: 6000 }); return; } finally { b?.classList.remove('busy'); }
     if (!models.length) { toast(t('set.noModels'), { icon: 'info' }); return; }
-    openMenu(models.slice(0, 40).map(m => ({ label: m, checked: m === val('ai.model'), run: () => { settings.set('ai.model', m); renderSection(); } })), { anchor: b });
+    const typed = (body?.querySelector('[data-model-in]')?.value || '').trim().toLowerCase();
+    const cur = val('ai.model');
+    const list = typed && typed !== (cur || '').toLowerCase() ? models.filter(m => m.toLowerCase().includes(typed)) : models;
+    const free = list.filter(m => /free|:free/i.test(m));
+    const items = [{ h: t('set.modelsN', { n: list.length }) }, ...(free.length && free.length < list.length ? [...free.map(m => mi(m, cur)), '-'] : []), ...list.filter(m => !free.includes(m) || free.length === list.length).map(m => mi(m, cur))];
+    const m = openMenu(items, { anchor: b?.closest('.combo') || b, cls: 'font-dd model-dd' });
+    m?.querySelector('.mi.chk')?.scrollIntoView({ block: 'center' });
   },
-  async saveKey(b, body) { const k = body.querySelector('[data-key]').value.trim(); if (!k) return; await host.call('ai.setKey', { provider: val('ai.provider'), key: k }); aiState.hasKey = true; toast(t('ai.keySavedToast'), { icon: 'key-round' }); renderSection(); },
-  async delKey() { await host.call('ai.setKey', { provider: val('ai.provider'), key: '' }); aiState.hasKey = false; renderSection(); },
+  async reloadModels(b) { b.classList.add('spin'); await autoModels(true); b.classList.remove('spin'); const n = cachedModels()?.length || 0; toast(n ? t('set.modelsN', { n }) : t('set.noModels'), { icon: 'list' }); },
+  async addProfile(b) {
+    openMenu([{ h: t('set.addProfile') }, ...Object.entries(PROVIDERS).map(([id, x]) => ({ label: id === 'custom' ? t('ai.custom') : x.name, note: x.local ? t('ai.local') : '', run: async () => { const p = await addProfile({ provider: id }); await refreshKey(); renderSection(); setTimeout(() => $(P_NOKEY(id) ? '[data-tx="ai.baseUrl"]' : '[data-key]', dlg?.el)?.focus(), 40); toast(t('set.profAdded', { name: p.name }), { icon: 'plus' }); } }))], { anchor: b });
+  },
+  async saveKey(b, body) { const k = body.querySelector('[data-key]').value.trim(); if (!k) return; await saveKey(k); toast(t('ai.keySavedToast'), { icon: 'key-round' }); renderSection(); autoModels(true); },
+  async delKey() { await saveKey(''); renderSection(); },
+  openRepo() { host.send('sys.openUrl', { url: REPO_URL }); },
+  openIssues() { host.send('sys.openUrl', { url: REPO_URL + '/issues' }); },
+  async copyEth(b) { await host.call('clipboard.write', { text: ETH_ADDRESS }); toast(t('set.support.copied'), { icon: 'coffee' }); },
+  assocText() { setAssoc(['txt', 'md', 'markdown', 'log', 'nfo']); },
+  assocNone() { setAssoc([]); },
+  assocDefaults() { host.send('sys.assoc.defaults'); },
   async testAi(b, body) {
     const res = body.querySelector('[data-test-res]');
     res.textContent = t('set.testing'); res.className = 'pv';

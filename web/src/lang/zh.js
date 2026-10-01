@@ -247,4 +247,23 @@ export default {
   'set.compatMode.restart': '重新启动后生效',
   'set.restartNow': '重新启动',
   'compat.auto': 'Folio 已以兼容模式重新启动（不使用硬件图形加速）：正常启动时窗口没有显示界面。可在“设置 → 高级”中关闭。',
+
+  // ---- 1.1: tabs, file types, AI profiles, support
+  'set.tabsH': '标签页', 'set.tabsMode': '打开的文件', 'set.tabsMode.multi': '保留打开的标签页', 'set.tabsMode.single': '始终只有一个标签页',
+  'set.tabsMode.h': '“始终只有一个标签页”：新文件或笔记会替换当前标签页（未保存的内容会先询问）。',
+  'set.assocH': '文件类型', 'set.assoc.default': 'Folio 是默认应用', 'set.assoc.text': '仅文本和 Markdown', 'set.assoc.none': '全部取消',
+  'set.assoc.defaults': '默认应用…', 'set.assoc.fail': '部分文件类型无法更改（见日志）',
+  'set.assoc.h': '勾选的类型会出现“打开方式 → Folio”。Windows 只允许你手动把 Folio 设为默认：“默认应用…”或“打开方式 → 始终”。',
+  'set.colorIcons': '彩色文件图标', 'set.colorIcons.h': '标签页和状态栏上的语言图标',
+  'set.aiProfilesH': '配置', 'set.addProfile': '新建配置', 'set.modelsN': '服务提供的模型：{n}', 'set.modelUnknown': '该模型不在服务列表中（{n}）— 请从列表中选择',
+  'set.pickModel': '从服务列表中选择模型', 'set.reloadModels': '刷新模型列表', 'set.showThinking': '显示模型的思考过程',
+  'set.keyOk': '密钥', 'set.keyNo': '无密钥', 'set.profActive': '当前', 'set.rename': '重命名',
+  'set.delProfileQ': '删除配置“{name}”？', 'set.delProfileText': '它的密钥也会从这台电脑上删除。', 'set.profSwitched': '当前配置：{name}', 'set.profAdded': '已添加配置“{name}”— 请粘贴密钥',
+  'set.support': '支持', 'set.support.d': '源代码，以及请作者喝杯咖啡',
+  'set.support.gh': '源代码、版本、问题和想法', 'set.support.issue': '报告问题',
+  'set.support.coffee': '请我喝咖啡', 'set.support.coffeeText': '如果 Folio 对你有用，可以请作者喝杯咖啡。', 'set.support.ethNote': '以太坊网络（ERC-20）。发送前请核对地址。',
+  'set.support.copy': '复制地址', 'set.support.copied': '已复制 ETH 地址', 'set.support.thanks': '感谢使用 Folio！',
+  'ai.profileModel': '配置和模型', 'ai.pickModel': '选择模型', 'ai.reasoning': '思考中', 'ai.reasoned': '思考过程', 'ai.profiles': '配置', 'ai.manageProfiles': '管理配置…',
+  'aiErr.empty.t': '空回答', 'aiErr.empty': '模型没有返回回答文本（可能在思考阶段就中断了）。请重试或换一个模型。',
+  'aiErr.model.t': '模型不被接受', 'aiErr.model': '服务不接受模型“{model}”。请从服务列表中选择模型。',
 };

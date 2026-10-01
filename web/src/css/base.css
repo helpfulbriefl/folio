@@ -5,8 +5,10 @@
   --mono:"JetBrains Mono","Cascadia Mono",Consolas,monospace;
   --serif:"Literata","Noto Serif SC",Georgia,serif;
   --ease:cubic-bezier(.2,.8,.2,1);
+  /* spring (stiffness 320, damping 24) sampled into linear(): menus, dialogs and panels settle instead of stopping dead */
+  --spring:linear(0, .042, .146, .282, .429, .57, .697, .805, .891, .956, 1.003, 1.033, 1.05, 1.057, 1.058, 1.053, 1.046, 1.038, 1.029, 1.021, 1.015, 1.009, 1.004, 1.001, 1);
   --z:1;--fs:16px;--code-fs:13.5px;--lh:1.75;--sheet-w:780px;--read-fs:16.5px;--read-lh:1.66;--read-w:760px;
-  --title-h:44px;--tool-h:46px;--status-h:30px;
+  --title-h:44px;--tool-h:46px;--status-h:24px;
 }
 
 /* ---------- themes ---------- */
@@ -213,3 +215,14 @@ html[data-dark="1"] .tg.on::after{background:#10231F}
 @keyframes rec{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}}
 html.theming *,html.theming *::before,html.theming *::after{transition:background-color .45s var(--ease),color .45s var(--ease),border-color .45s var(--ease),box-shadow .45s var(--ease),fill .45s var(--ease)!important}
 html.static *,html.static *::before,html.static *::after{animation:none!important;transition:none!important}
+
+/* colored file-type icons (developer-icons, MIT) */
+.di{width:14px;height:14px;flex:none;display:block}
+.st .di{width:12px;height:12px}
+html[data-dark="1"] .di{filter:saturate(.9) brightness(1.08)}
+@supports (animation-timing-function:linear(0,1)){
+  .dd.main{animation:pop .3s var(--spring)}
+  .modal{animation:modalIn .38s var(--spring)}
+  .panel.enter{animation:panelIn .4s var(--spring)}
+}
+html.static .dd.main,html.static .modal,html.static .panel.enter{animation:none}

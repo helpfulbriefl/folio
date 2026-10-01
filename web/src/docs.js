@@ -75,7 +75,16 @@ export function newDoc(o = {}) {
   const tab = createTab(o);
   addTab(tab, true, docs.active ? docs.tabs.indexOf(docs.active) + 1 : undefined);
   setTimeout(() => editor.focus(), 0);
+  if (singleTab() && !o.keepOthers) closeAllBut(tab);
   return tab;
+}
+
+/** Settings → General → Tabs: "one tab" — opening a file or a new note replaces what was open. */
+export const singleTab = () => settings.get('tabsMode') === 'single';
+/** Closes every other tab; unsaved ones ask first (Cancel keeps that tab open next to the new one). */
+export async function closeAllBut(keep) {
+  for (const o of docs.tabs.filter(x => x !== keep)) { if (docs.tabs.includes(o)) await closeTab(o); }
+  if (docs.tabs.includes(keep) && docs.active !== keep) activateTab(keep);
 }
 
 export function activateTab(tab) {
@@ -98,6 +107,8 @@ function isBlankUntitled(tab) { return tab && !tab.path && editor.doc(tab).lengt
 /** Opens files (from dialog, command line, drop, recent list). */
 export async function openPaths(paths, opts = {}) {
   let last = null;
+  const single = singleTab() && !opts.newTab;
+  if (single && paths.length > 1) paths = paths.slice(-1);
   for (const path of paths) {
     const existing = findTab(path);
     if (existing) { last = existing; continue; }
@@ -124,6 +135,7 @@ export async function openPaths(paths, opts = {}) {
     }
   }
   if (last) activateTab(last);
+  if (last && single) await closeAllBut(last);
   watchFiles();
   return last;
 }

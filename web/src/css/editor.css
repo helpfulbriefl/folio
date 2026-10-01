@@ -12,8 +12,8 @@
 #ed .cm-tooltip{background:var(--glass);border:1px solid var(--glass-line);border-radius:10px;box-shadow:var(--shadow-pop);backdrop-filter:blur(20px);color:var(--text);font:12.5px/1.45 var(--ui)}
 
 /* prose sheet (standard + proof) */
-#ed .prose.m-standard .cm-content,#ed .prose.m-proof .cm-content{max-width:var(--sheet-w);width:100%;margin:0 auto;padding:48px 72px 38vh;letter-spacing:-.004em}
-#ed .code.m-standard .cm-content,#ed .code.m-proof .cm-content{padding:16px 18px 38vh;font-family:var(--mono);font-size:calc(var(--code-fs)*var(--z))}
+#ed .prose.m-standard .cm-content,#ed .prose.m-proof .cm-content{max-width:var(--sheet-w);width:100%;margin:0 auto;padding:calc(48px*var(--z)) calc(72px*min(var(--z),1.6)) 38vh;letter-spacing:-.004em}
+#ed .code.m-standard .cm-content,#ed .code.m-proof .cm-content{padding:calc(16px*var(--z)) calc(18px*var(--z)) 38vh;font-family:var(--mono);font-size:calc(var(--code-fs)*var(--z))}
 #ed .code.m-standard .cm-scroller,#ed .code.m-proof .cm-scroller{line-height:1.7}
 #ed .m-standard .cm-activeLine,#ed .m-proof .cm-activeLine{background:transparent}
 #ed .code.m-standard .cm-activeLine{background:var(--curline)}

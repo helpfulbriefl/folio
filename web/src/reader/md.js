@@ -9,6 +9,10 @@ function inline(s) {
   const codes = [];
   s = s.replace(/(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/g, (m, a, c) => { codes.push(c.trim()); return `\u0000${codes.length - 1}\u0000`; });
   s = esc(s);
+  // a tiny allow-list of harmless inline HTML often found in READMEs
+  s = s.replace(/&lt;kbd&gt;([^&<]{1,24})&lt;\/kbd&gt;/gi, '<kbd class="kbdi">$1</kbd>')
+    .replace(/&lt;(sup|sub|u|mark)&gt;([\s\S]*?)&lt;\/\1&gt;/gi, '<$1>$2</$1>')
+    .replace(/&lt;br\s*\/?&gt;/gi, '<br>');
   s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g, (m, alt) => `<span class="img-ph">${I('image', 'xs')}${alt || 'image'}</span>`);
   s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)[^)]*\)/g, '<a class="lnk" data-href="$2" title="$2">$1</a>');
   s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)]+[^\s<).,;:!?])/g, '$1<a class="lnk" data-href="$2" title="$2">$2</a>');

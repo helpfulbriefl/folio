@@ -11,9 +11,12 @@ import { openMenu, closeMenus, isOpen as menuOpen } from './menu.js';
 import { MENUBAR, menuItems, tabMenu, encodingMenu, eolMenu, langMenu, typeMenu } from './menus.js';
 import { issuesOf } from '../editor/proof.js';
 import { APP } from './settings-ui.js';
+import DEVICONS from '../devicons.gen.js';
 
 const FILE_ICON = { markdown: 'file-text', text: 'file', json: 'file-code', html: 'file-code', css: 'file-code', xml: 'file-code' };
 const tabIcon = tab => (tab.view === 'read' ? 'book-open' : FILE_ICON[tab.lang] || (tab.lang ? 'code-xml' : 'file'));
+/** Colored file-type icon (developer-icons) when there is one for the language, else the line icon. */
+const tabIconHTML = tab => (tab.view !== 'read' && settings.get('colorIcons') !== false && DEVICONS[tab.lang] ? DEVICONS[tab.lang] : I(tabIcon(tab), 'sm'));
 
 export const win = { maximized: false, active: true, fullscreen: false, topmost: false };
 
@@ -68,6 +71,7 @@ export function buildChrome(root) {
   settings.on('topmost', renderTitleButtons);
   settings.on('statusBar', v => $('#status').hidden = v === false);
   settings.on('zoom', () => renderStatus());
+  settings.on('colorIcons', () => { renderTabs(); renderStatus(); });
   $('#status').hidden = settings.get('statusBar') === false;
 }
 
@@ -165,7 +169,7 @@ export function renderTabs() {
     const on = tab === docs.active;
     const dirty = isDirty(tab);
     const title = tab.path ? tab.path : tabName(tab);
-    return `<button class="tab ${on ? 'on' : ''}" data-id="${tab.id}" title="${esc(title)}">${I(tabIcon(tab), 'sm')}<span class="nm">${esc(tabName(tab))}</span>${dirty ? '<i class="dirty"></i>' : ''}<span class="x" title="${esc(t('tab.close'))}">${I('x', 'xs')}</span></button>`;
+    return `<button class="tab ${on ? 'on' : ''}" data-id="${tab.id}" title="${esc(title)}">${tabIconHTML(tab)}<span class="nm">${esc(tabName(tab))}</span>${dirty ? '<i class="dirty"></i>' : ''}<span class="x" title="${esc(t('tab.close'))}">${I('x', 'xs')}</span></button>`;
   }).join('');
   strip.innerHTML = html;
   const add = $('.titlebar .tab-add');
@@ -295,7 +299,7 @@ export function renderStatus() {
     if (r) parts.push(`<span class="st">${esc(r)}</span>`);
   }
   parts.push('<span class="grow"></span>');
-  parts.push(`<button class="st" data-st="type">${esc(tab.lang === 'text' ? t('lang.text') : langName(tab.lang))}</button>`);
+  parts.push(`<button class="st" data-st="type">${settings.get('colorIcons') !== false && DEVICONS[tab.lang] ? DEVICONS[tab.lang] : ''}${esc(tab.lang === 'text' ? t('lang.text') : langName(tab.lang))}</button>`);
   parts.push(`<button class="st ${tab.encoding.startsWith('utf-') ? '' : 'hl'}" data-st="enc">${I('file-code', 'xs')}${esc(encLabel(tab))}</button>`);
   parts.push(`<button class="st" data-st="eol">${tab.mixedEol ? esc(t('st.mixed')) : tab.eol.toUpperCase()}</button>`);
   parts.push(`<button class="st" data-st="lang">${I('globe', 'xs')}${esc(lang().toUpperCase())}</button>`);

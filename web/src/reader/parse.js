@@ -85,21 +85,58 @@ function parseTelegram(src) {
   })).filter(m => m.text);
 }
 
-/** Document mode: sections by headings, paragraphs as blocks. */
+/**
+ * Document mode: one block per logical section — a heading (#, ##, ###) with everything under it.
+ * A heading with nothing under it joins the next section ("# Title" + "## Intro"); text without headings is grouped
+ * by paragraphs into blocks of a comfortable size; only a very long section is split, and only between paragraphs
+ * (never inside a list, table, quote or code block).
+ */
+const SOFT = 1400, HARD = 3200;
 export function parseDoc(text) {
   const src = text.replace(/\r\n?/g, '\n');
   const blocks = [];
   let cur = [];
   let inCode = false;
-  const push = () => { const s = cur.join('\n').trim(); if (s) blocks.push({ role: 'doc', text: s, heading: /^#{1,6}\s/.test(s) ? s.split('\n')[0].replace(/^#+\s*/, '') : null }); cur = []; };
-  for (const line of src.split('\n')) {
+  const body = () => cur.join('\n').trim();
+  const onlyHeadings = () => cur.every(l => !l.trim() || /^#{1,6}\s/.test(l));
+  const push = () => {
+    const s = body();
+    if (s) {
+      const first = s.split('\n')[0];
+      blocks.push({ role: 'doc', text: s, heading: /^#{1,6}\s/.test(first) ? first.replace(/^#+\s*/, '').replace(/\s+#+\s*$/, '') : null });
+    }
+    cur = [];
+  };
+  const headingSection = () => /^#{1,3}\s/.test(cur.find(l => l.trim()) || '');
+  const inStructure = () => {
+    const last = cur[cur.length - 1] || '';
+    return /^\s*([-*+]|\d+[.)])\s/.test(last) || /^\s*\|/.test(last) || /^\s*>/.test(last);
+  };
+  const lines = src.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (/^\s*(```|~~~)/.test(line)) inCode = !inCode;
-    if (!inCode && /^#{1,3}\s/.test(line)) { push(); cur.push(line); continue; }
-    if (!inCode && !line.trim() && cur.length && !/^\s*([-*+]|\d+[.)])\s/.test(cur[cur.length - 1]) && cur.join('\n').length > 280) { push(); continue; }
+    if (!inCode && /^#{1,3}\s/.test(line)) {
+      if (!onlyHeadings()) push();
+      cur.push(line);
+      continue;
+    }
+    if (!inCode && !line.trim() && cur.length && !inStructure()) {
+      const len = body().length;
+      // plain text (no headings): paragraphs grouped into ~SOFT blocks; a heading section only breaks when it is huge
+      const limit = headingSection() ? HARD : SOFT;
+      const next = lines.slice(i + 1).find(l => l.trim()) || '';
+      if (len > limit && !/^\s*([-*+]|\d+[.)]|\|)\s?/.test(next)) {
+        const head = headingSection() ? cur.find(l => l.trim()) : null;
+        push();
+        if (head) cur.push(head.replace(/^(#+\s*)(.*?)\s*$/, '$1$2 ·'), ''); // continuation keeps its section title
+        continue;
+      }
+    }
     cur.push(line);
   }
   push();
-  return blocks;
+  return blocks.map(b => (b.heading && / ·$/.test(b.heading) ? { ...b, heading: b.heading.replace(/ ·$/, ''), cont: true } : b));
 }
 
 export function parse(text) {
