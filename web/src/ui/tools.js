@@ -3,7 +3,7 @@ import { $, $$, el, esc, I, basename, fmtSize, wordCount, debounce, on } from '.
 import { t, lang } from '../i18n.js';
 import { settings } from '../settings.js';
 import { host } from '../host.js';
-import { docs, tabName, reloadTab, saveTab, setEncoding, newDoc, encName, encLabel, isDirty } from '../docs.js';
+import { docs, tabName, reloadTab, saveTab, setEncoding, newDoc, encName, encLabel, isDirty, windowTitle } from '../docs.js';
 import { editor } from '../editor/editor.js';
 import { allCommands, titleOf, keysOf, prettyKeys, getCommand, rebuildKeymap, altKeys } from '../commands.js';
 import { modal, toast, prompt, confirm } from './dialogs.js';
@@ -314,5 +314,5 @@ export function printDoc() {
   box.className = md ? 'md' : 'plain';
   box.innerHTML = md ? `<div class="p-md">${renderMd(text)}</div>` : `<pre class="p-pre">${esc(text)}</pre>`;
   document.title = tabName(tab);
-  setTimeout(() => { window.print(); setTimeout(() => { box.innerHTML = ''; host.send('win.setTitle', { title: `${tabName(tab)} — Folio` }); }, 500); }, 50);
+  setTimeout(() => { window.print(); setTimeout(() => { box.innerHTML = ''; host.send('win.setTitle', { title: windowTitle(tab) }); }, 500); }, 50);
 }

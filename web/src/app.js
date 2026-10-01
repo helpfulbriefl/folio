@@ -4,7 +4,7 @@ import { host } from './host.js';
 import { settings } from './settings.js';
 import { t, lang, setLang, pickLang, addLang } from './i18n.js';
 import { commands, run, getCommand, commandForEvent, keysOf, normalize, rebuildKeymap, altKeys } from './commands.js';
-import { docs, encName, newDoc, openDialog, openPaths, saveTab, saveAll, closeTab, reopenClosed, cycleTab, activateTab, reloadTab, setEncoding, isDirty, tabName, sessionSnapshot, saveSession, confirmClose } from './docs.js';
+import { docs, encName, newDoc, openDialog, openPaths, saveTab, saveAll, closeTab, reopenClosed, cycleTab, activateTab, reloadTab, setEncoding, isDirty, tabName, windowTitle, sessionSnapshot, saveSession, confirmClose } from './docs.js';
 import { editor } from './editor/editor.js';
 import { isProse } from './editor/langs.js';
 import * as reader from './reader/reader.js';
@@ -218,7 +218,7 @@ let lastTitle = '';
 function updateTitle() {
   const tab = cur();
   if (!tab) return;
-  const title = `${isDirty(tab) ? '● ' : ''}${tabName(tab)} — Folio`;
+  const title = windowTitle(tab);
   if (title === lastTitle) return;
   lastTitle = title;
   host.send('win.setTitle', { title });

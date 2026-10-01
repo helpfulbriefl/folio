@@ -24,6 +24,8 @@ function defaultMode(lang) {
 
 export function tabName(tab) { return tab.path ? basename(tab.path) : (tab.name || t('doc.untitled')); }
 export function isDirty(tab) { return editor.isDirty(tab); }
+/** The window title for a tab (● = unsaved changes). */
+export function windowTitle(tab) { return `${isDirty(tab) ? '● ' : ''}${tabName(tab)} — Folio`; }
 
 function nextUntitled() {
   const used = new Set(docs.tabs.filter(x => !x.path).map(x => x.name));
@@ -92,7 +94,7 @@ export function activateTab(tab) {
   docs.active = tab;
   editor.show(tab);
   bus.emit('active', tab);
-  host.send('win.setTitle', { title: `${tabName(tab)} — Folio` });
+  host.send('win.setTitle', { title: windowTitle(tab) });
   saveSession();
 }
 
@@ -228,7 +230,7 @@ export async function saveTab(tab = docs.active, opts = {}) {
   watchFiles();
   saveSession();
   if (r.replaced > 0) toast(t('toast.savedLossy', { n: r.replaced }), { icon: 'triangle-alert' });
-  if (tab === docs.active) host.send('win.setTitle', { title: `${tabName(tab)} — Folio` });
+  if (tab === docs.active) host.send('win.setTitle', { title: windowTitle(tab) });
   return true;
 }
 
