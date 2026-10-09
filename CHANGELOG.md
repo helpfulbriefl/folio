@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+- English is the default for new installations and the initial UI/native menus. Saved language preferences and explicit automatic locale selection are preserved.
+- English-first README with a separate Russian guide, live GitHub badges, provider/privacy notes and contribution information.
+- Language regression tests and read-only pull-request checks for the UI build, core tests and Windows compilation.
+
 ## [1.1.1] — 2026-10-01
 
 Обновление поверх запущенной Folio / Updating while Folio is running.

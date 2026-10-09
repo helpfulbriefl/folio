@@ -201,7 +201,7 @@ internal sealed class FolioApp : ApplicationContext
         if (_fatal) return;
         _fatal = true;
         if (SelfTestMode) { SelfTest?.Fail("WebView2: " + ex.Message); return; }
-        bool ru = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru";
+        bool ru = NativeLanguage() == "ru";
         var text = ru
             ? $"Не удалось запустить WebView2 — компонент Windows, в котором работает интерфейс Folio.\n\n{ex.Message}\n\nПерезапустите Folio. Если не поможет — переустановите «Microsoft Edge WebView2 Runtime»."
             : $"Could not start WebView2, the Windows component that runs the Folio interface.\n\n{ex.Message}\n\nRestart Folio. If that does not help, reinstall the Microsoft Edge WebView2 Runtime.";
@@ -415,17 +415,27 @@ internal sealed class FolioApp : ApplicationContext
     // ------------------------------------------------------------------ strings for native UI
     public string Str(string key, string fallback) => _strings.TryGetValue(key, out var s) && !string.IsNullOrEmpty(s) ? s : fallback;
 
+    string NativeLanguage()
+    {
+        var pref = SettingString("lang") ?? "en";
+        if (pref != "auto") return pref;
+        var locale = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        return locale is "ru" or "uk" or "be" or "kk" ? "ru" : locale == "zh" ? "zh" : "en";
+    }
+
     void LoadStrings()
     {
+        var lang = NativeLanguage();
+        // A cached translation may belong to an old preference. Keep it only when it matches.
         try
         {
-            if (JsonStore.LoadNode(StringsFile)?["strings"] is JsonObject o)
+            var saved = JsonStore.LoadNode(StringsFile);
+            if (saved?["lang"]?.GetValue<string>() == lang && saved?["strings"] is JsonObject o)
                 foreach (var (k, v) in o)
                     if (v is JsonValue jv && jv.TryGetValue<string>(out var s)) _strings[k] = s;
         }
         catch { }
         if (_strings.Count > 0) return;
-        var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
         if (!NativeStrings.Tables.TryGetValue(lang, out var table)) table = NativeStrings.Tables["en"];
         foreach (var (k, v) in table) _strings[k] = v;
     }
@@ -562,7 +572,7 @@ internal sealed class FolioApp : ApplicationContext
         catch (Exception ex)
         {
             Log.Error("Cannot replace Folio.exe", ex);
-            bool ru = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru";
+            bool ru = NativeLanguage() == "ru";
             MessageBox.Show(ru
                 ? $"Не получилось заменить Folio.exe ({ex.Message}).\n\nНовая версия скачана сюда:\n{_downloaded}\n\nЗакройте Folio и замените файл вручную."
                 : $"Could not replace Folio.exe ({ex.Message}).\n\nThe new version was downloaded to:\n{_downloaded}\n\nClose Folio and replace the file manually.", "Folio", MessageBoxButtons.OK, MessageBoxIcon.Warning);

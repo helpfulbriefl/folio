@@ -7,8 +7,8 @@ import { Emitter } from './util.js';
 export const LANGS = { ru, en, zh };
 export const LANG_NAMES = { ru: 'Русский', en: 'English', zh: '中文（简体）' };
 const bus = new Emitter();
-let cur = 'ru';
-let dict = ru;
+let cur = 'en';
+let dict = en;
 
 export function setLang(code) {
   if (!LANGS[code]) code = 'en';
@@ -48,9 +48,9 @@ function pluralForm(n, f) {
   return (n === 1 ? f[0] : f[1] ?? f[0]) ?? '';
 }
 
-/** Chooses a language from the Windows UI locale. */
+/** English by default; follow the Windows UI locale only when explicitly set to 'auto'. */
 export function pickLang(pref, locale) {
-  if (pref && pref !== 'auto' && LANGS[pref]) return pref;
+  if (pref !== 'auto') return LANGS[pref] ? pref : 'en';
   const l = (locale || navigator.language || 'en').toLowerCase();
   if (l.startsWith('ru') || l.startsWith('uk') || l.startsWith('be') || l.startsWith('kk')) return 'ru';
   if (l.startsWith('zh')) return 'zh';
