@@ -2,7 +2,7 @@
 
 **A calm Windows notepad with a powerful second side.** Write notes, read Markdown and AI chat exports, rescue legacy text encodings, and review AI edits without leaving your document.
 
-[**Download Folio.exe**](https://github.com/helpfulbriefl/folio/releases/latest/download/Folio.exe) · [Releases](https://github.com/helpfulbriefl/folio/releases) · [Русский](README.ru.md) · [Report an issue](https://github.com/helpfulbriefl/folio/issues)
+[**Download Folio.exe**](https://github.com/helpfulbriefl/folio/releases/latest/download/Folio.exe) · [Releases](https://github.com/helpfulbriefl/folio/releases) · [Changelog](CHANGELOG.md) · [Русский](README.ru.md) · [Report an issue](https://github.com/helpfulbriefl/folio/issues)
 
 [![Build](https://github.com/helpfulbriefl/folio/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/helpfulbriefl/folio/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/helpfulbriefl/folio)](https://github.com/helpfulbriefl/folio/releases/latest)
