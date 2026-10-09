@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.1.2] — 2026-10-09
 
 - English is the default for new installations and the initial UI/native menus. Saved language preferences and explicit automatic locale selection are preserved.
 - English-first README with a separate Russian guide, live GitHub badges, provider/privacy notes and contribution information.
