@@ -1,109 +1,149 @@
 # Folio
 
-**Блокнот для Windows, в котором приятно писать и читать.** Живёт в трее, открывает любые кодировки, проверяет орфографию, умеет «читалку» для Markdown и выгрузок чатов с ИИ, а по <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> принимает быструю заметку из любого места Windows.
+**A calm Windows notepad with a powerful second side.** Write notes, read Markdown and AI chat exports, rescue legacy text encodings, and review AI edits without leaving your document.
 
-[**⬇ Скачать Folio.exe**](https://github.com/helpfulbriefl/folio/releases/latest/download/Folio.exe) · Windows 10/11 x64 · один файл, без установки · [все версии](https://github.com/helpfulbriefl/folio/releases) · [English](#english)
+[**Download Folio.exe**](https://github.com/helpfulbriefl/folio/releases/latest/download/Folio.exe) · [Releases](https://github.com/helpfulbriefl/folio/releases) · [Changelog](CHANGELOG.md) · [Русский](README.ru.md) · [Report an issue](https://github.com/helpfulbriefl/folio/issues)
 
-![Folio](https://github.com/helpfulbriefl/folio/releases/latest/download/folio.png)
+[![Build](https://github.com/helpfulbriefl/folio/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/helpfulbriefl/folio/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/helpfulbriefl/folio)](https://github.com/helpfulbriefl/folio/releases/latest)
+[![EXE downloads](https://img.shields.io/github/downloads/helpfulbriefl/folio/Folio.exe?label=EXE%20downloads)](https://github.com/helpfulbriefl/folio/releases)
+[![License: MIT](https://img.shields.io/github/license/helpfulbriefl/folio)](LICENSE)
 
-## Что умеет
+Windows 10/11 x64 · Single executable · Bring your own AI key · English, Russian and Simplified Chinese
 
-- **Вкладки, сессия и «горячий выход».** Закрыли окно с несохранённым текстом — при следующем запуске всё на месте. Перед каждой перезаписью файла Folio кладёт копию прошлой версии в историю (*Файл → Версии файла*).
-- **Кодировки без сюрпризов.** Сам распознаёт UTF-8/16/32, Windows-1251, CP866, KOI8-R, Windows-1252, GB18030, Shift-JIS и ещё два десятка; показывает, как выглядит файл в каждой из них; переводит старые файлы в UTF-8 в один клик и предупреждает, если символы не влезут в выбранную кодировку. Концы строк CRLF/LF/CR сохраняются.
-- **Три режима письма.** *Обычный* — спокойная страница для текста; *Кодер* — номера строк, подсветка ~20 языков, мини-карта; *Корректор* — проверка орфографии словарями Windows, подсказки, личный словарь и подсказки по пунктуации (двойные пробелы, пробел перед запятой, запятая перед «что», «чтобы», «но», тире вместо дефиса).
-- **Читалка.** <kbd>Ctrl</kbd>+<kbd>2</kbd> превращает Markdown, заметки и выгрузки диалогов с ChatGPT/Claude в книжную страницу или ленту, с оглавлением и выбором блоков для копирования.
-- **ИИ со своим ключом.** Исправить ошибки, сократить, сделать вежливее, перевести, продолжить, объяснить код — правки показываются как рецензия: принять или отклонить каждую. Работает с OpenAI, OpenRouter, DeepSeek, Groq, Mistral и локальными Ollama / LM Studio (любой OpenAI-совместимый адрес). Ключ хранится зашифрованным (DPAPI) только на вашем компьютере.
-- **Быстрые заметки.** <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> — маленькое окно поверх всего: написали, нажали Enter, мысль ушла в файл заметок с датой и временем. <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd> — показать или спрятать Folio.
-- **Темы.** Бумага, Графит (тёмная), Сепия, Стекло (мягкий градиент), или «как в системе». Шрифты, ширина строки, межстрочный интервал, масштаб интерфейса.
-- **Языки интерфейса:** русский, English, 中文 — и свои переводы (*Настройки → Дополнительно → Шаблон перевода*).
-- **Палитра команд** <kbd>Ctrl</kbd>+<kbd>K</kbd>, все сочетания клавиш настраиваются, журнал событий (*Справка → Журнал*), проверка обновлений с GitHub с проверкой SHA-256.
+![Folio showing reviewable AI edits](https://github.com/helpfulbriefl/folio/releases/latest/download/folio.png)
 
-<a id="screenshots" name="screenshots"></a>
-## Скриншоты
+## Why Folio?
 
-| | |
+| Workflow | What you get |
 | --- | --- |
-| ![Читалка: диалог с ChatGPT книжной страницей](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-reader.png) | ![Старое письмо в Windows-1251 и меню кодировок](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-encodings.png) |
-| Читалка: длинный диалог с ChatGPT как книга | Кодировки: как файл выглядит в каждой из них |
-| ![Режим «Кодер» в теме «Графит»](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-dark.png) | ![Тема «Стекло» и живой Markdown](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-glass.png) |
-| «Кодер» в тёмной теме «Графит» | Тема «Стекло» и живой Markdown |
+| Everyday writing | Tabs, session recovery, unsaved-text recovery, file version history and a distraction-free page. |
+| Reading | A book or feed view for Markdown and AI chat exports, with a table of contents and selectable blocks. |
+| Working with old files | Encoding detection and preview, one-click UTF-8 conversion, line-ending preservation and warnings before lossy saves. |
+| Coding and proofreading | Syntax highlighting, line numbers, a minimap, Windows spell checking, a personal dictionary and punctuation hints. Some punctuation rules are language-specific. |
+| AI-assisted editing | Fix, shorten, translate, continue or explain text. Review changes and accept or reject them instead of blindly overwriting your document. |
+| Capturing ideas | A system-tray app and a global quick-note shortcut: **Ctrl+Alt+N**. |
 
-Скриншоты снимает сам Folio во время самопроверки в CI (`Folio.exe --selftest`) на чистой Windows — это настоящая программа, а не макет.
+Choose Paper, Graphite, Sepia, Glass or a system-following theme. Keyboard shortcuts, typography and reading layout are customizable.
 
-## Установка
+### Screenshots
 
-1. Скачайте [Folio.exe](https://github.com/helpfulbriefl/folio/releases/latest/download/Folio.exe) и положите куда удобно (например, в `C:\Users\<вы>\Apps\Folio`).
-2. Запустите. Windows SmartScreen может предупредить, что издатель неизвестен (файл не подписан сертификатом) — нажмите **Подробнее → Выполнить в любом случае**. Контрольная сумма — в `SHA256SUMS.txt` рядом с релизом.
-3. Для работы нужен **Microsoft Edge WebView2 Runtime** — в Windows 11 он встроен, в Windows 10 обычно тоже есть. Если его нет, Folio предложит открыть страницу загрузки.
-
-**Проверка орфографии** использует словари Windows: для русского языка в *Параметры → Время и язык → Язык* должен быть добавлен «Русский» (с ним ставится и словарь).
-
-**Переносная версия.** Создайте рядом с `Folio.exe` пустой файл `folio.portable` — тогда настройки, сессия и история будут храниться в папке `FolioData` рядом с программой.
-
-### Если окно белое или пустое
-
-Пока интерфейс загружается, Folio показывает экран «Запуск Folio…». Если интерфейс не поднялся за 30 секунд или окно осталось пустым из‑за видеодрайвера, Folio сам перезапускается в **режиме совместимости** (без аппаратного ускорения графики) или показывает, что случилось, с кнопками «Перезапустить в режиме совместимости», «Открыть папку журнала» и «Закрыть».
-
-Режим можно включить и вручную: запустите `Folio.exe --compat` или включите *Настройки → Дополнительно → Режим совместимости*. Там же он выключается. Журнал лежит в `%LocalAppData%\Folio\logs` — если что‑то не работает, приложите его к [issue](https://github.com/helpfulbriefl/folio/issues).
-
-### Где лежат данные
-
-| Что | Где |
+| Reader | Encoding preview |
 | --- | --- |
-| Настройки, сессия, список недавних, личный словарь, ключи ИИ (зашифрованы) | `%AppData%\Folio` |
-| Журнал, резервные копии несохранённых вкладок, история версий файлов, WebView2 | `%LocalAppData%\Folio` |
-| Быстрые заметки (по умолчанию) | `Документы\Folio\Быстрые заметки.md` |
+| ![Markdown and AI chat reader](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-reader.png) | ![Legacy text encoding preview](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-encodings.png) |
 
-Folio ничего не отправляет «домой»: в сеть он ходит только за обновлениями (GitHub API) и к тому ИИ-сервису, который вы сами настроили.
-
-## Клавиши
-
-| | |
+| Coding in Graphite | Glass theme |
 | --- | --- |
-| Новая вкладка / окно | <kbd>Ctrl</kbd>+<kbd>N</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> |
-| Открыть, сохранить, сохранить как | <kbd>Ctrl</kbd>+<kbd>O</kbd>, <kbd>Ctrl</kbd>+<kbd>S</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> |
-| Вернуть закрытую вкладку | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> |
-| Писать / читать | <kbd>Ctrl</kbd>+<kbd>1</kbd> / <kbd>Ctrl</kbd>+<kbd>2</kbd> |
-| Обычный / Кодер / Корректор | <kbd>Alt</kbd>+<kbd>1</kbd> / <kbd>Alt</kbd>+<kbd>2</kbd> / <kbd>Alt</kbd>+<kbd>3</kbd> |
-| Найти, заменить, перейти к строке | <kbd>Ctrl</kbd>+<kbd>F</kbd>, <kbd>Ctrl</kbd>+<kbd>H</kbd>, <kbd>Ctrl</kbd>+<kbd>G</kbd> |
-| Палитра команд | <kbd>Ctrl</kbd>+<kbd>K</kbd> |
-| Панель ИИ / исправить ошибки | <kbd>Ctrl</kbd>+<kbd>I</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> |
-| Панель корректора, следующая ошибка | <kbd>F7</kbd>, <kbd>F8</kbd> |
-| Фокус, полный экран, поверх окон | <kbd>F9</kbd>, <kbd>F11</kbd>, <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>T</kbd> |
-| Спрятать в трей | <kbd>Esc</kbd> |
-| Все сочетания | <kbd>Ctrl</kbd>+<kbd>/</kbd> |
+| ![Code editor in the dark Graphite theme](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-dark.png) | ![Glass theme with live Markdown](https://github.com/helpfulbriefl/folio/releases/latest/download/folio-glass.png) |
 
-### Командная строка
+These screenshots are generated by Folio's Windows self-test, not product mockups.
 
+## Get started
+
+1. Download **Folio.exe** from the [latest release](https://github.com/helpfulbriefl/folio/releases/latest) and keep it in a folder you control.
+2. Verify it against **SHA256SUMS.txt** from the same release if needed. The executable is **not code-signed**; Windows SmartScreen may show an unknown-publisher warning. Run it only if you trust the source.
+3. Folio requires the **Microsoft Edge WebView2 Runtime**. If it is missing, the app offers to open Microsoft's download page.
+4. Start writing. For AI features, open **Settings → AI**, configure a provider, model and your own key. The notepad and reader do not require an AI subscription.
+
+**Language:** the next build from this source defaults to English on new installations. Saved language preferences are preserved. Select Russian, Chinese, a custom translation or automatic Windows-language selection in Settings. Existing release binaries are not changed by a documentation update.
+
+**Portable mode:** create an empty `folio.portable` file next to `Folio.exe`. Settings, sessions and history then live in the adjacent `FolioData` folder. AI secrets still use Windows DPAPI and are not a cross-machine key-export format.
+
+**Spell checking:** install the corresponding language and spelling support in Windows Settings. Folio uses Windows dictionaries rather than bundling its own.
+
+### AI providers and privacy
+
+Folio uses OpenAI-compatible endpoints, including presets for OpenAI, OpenRouter, DeepSeek, Groq, Mistral, Ollama and LM Studio. Endpoint and model compatibility depends on the provider; this is not a promise that every model or API is supported.
+
+- Save multiple API profiles and switch between them. Where supported, retrieve the model list with `/models`.
+- Provider API keys are encrypted locally with Windows DPAPI. **Do not put keys in issues, screenshots or repositories.**
+- AI requests send the selected text or configured document context to your chosen provider. That provider's pricing, terms and data policies apply.
+- The app also contacts GitHub for update checks and downloads. It does not add a product-analytics service.
+- AI access is **bring your own key**; downloading Folio does not include model credits.
+
+### Where data lives
+
+| Data | Default location |
+| --- | --- |
+| Settings, session, recent files, dictionary and encrypted AI secrets | `%AppData%\Folio` |
+| Logs, recovery backups, file versions and WebView2 data | `%LocalAppData%\Folio` |
+| Quick notes | Your Documents folder, under `Folio` (file name follows the interface language) |
+
+### If the window is blank
+
+Folio shows a startup screen and can restart in compatibility mode if the interface fails to load. You can also run `Folio.exe --compat` or enable **Settings → Advanced → Compatibility mode**.
+
+Logs are in `%LocalAppData%\Folio\logs`. When [reporting a problem](https://github.com/helpfulbriefl/folio/issues), include your Windows version, Folio version, reproduction steps and relevant logs. Remove keys, personal text and private paths first.
+
+## Keyboard shortcuts
+
+| Action | Shortcut |
+| --- | --- |
+| New tab / window | Ctrl+N / Ctrl+Shift+N |
+| Open / save / save as | Ctrl+O / Ctrl+S / Ctrl+Shift+S |
+| Reopen a closed tab | Ctrl+Shift+T |
+| Write / read | Ctrl+1 / Ctrl+2 |
+| Standard / coder / proofreader | Alt+1 / Alt+2 / Alt+3 |
+| Find / replace / go to line | Ctrl+F / Ctrl+H / Ctrl+G |
+| Command palette | Ctrl+K |
+| AI panel / fix spelling with AI | Ctrl+I / Ctrl+Shift+E |
+| Proofreading panel / next issue | F7 / F8 |
+| Focus / fullscreen / always on top | F9 / F11 / Ctrl+Alt+T |
+| Quick note from anywhere | Ctrl+Alt+N |
+| Show or hide Folio | Win+Alt+F |
+| Hide to tray / shortcut reference | Esc / Ctrl+/ |
+
+### Command line
+
+```text
+Folio.exe [files...]        Open files in the running instance
+  --new-window             Open a new window
+  --quick-note             Open the quick-note window
+  --tray                   Start in the system tray
+  --compat                 Enable remembered compatibility mode
+  --selftest[=folder]      Run the Windows UI tour and write screenshots/report.json
 ```
-Folio.exe [файлы…]      открыть файлы (в уже запущенном Folio)
-  --new-window          в новом окне
-  --quick-note          сразу окно быстрой заметки
-  --tray                запуститься в трее
-  --compat              режим совместимости: без аппаратного ускорения графики (запоминается)
-  --selftest[=папка]    самопроверка: сценарий по всему интерфейсу + скриншоты и report.json
-```
 
-## Сборка из исходников
+## Build and test
 
-Нужны Node.js 20+ и .NET 8 SDK.
+Use **Windows**, **Node.js 20+** and the **.NET 8 SDK** for the full desktop build and native self-test.
 
-```
-cd web && npm ci && node build.mjs && cd ..
-dotnet test tests/Folio.Core.Tests
+```powershell
+cd web
+npm ci
+npm test
+node build.mjs --strict
+cd ..
+dotnet test tests/Folio.Core.Tests -c Release
 dotnet publish src/Folio/Folio.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o out
 ```
 
-Интерфейс (`web/`) — обычный JavaScript + CodeMirror 6, собирается esbuild в `web/dist` и вшивается в exe. Оболочка (`src/Folio`) — WinForms + WebView2: окно без системного заголовка, трей, горячие клавиши, быстрые заметки, проверка орфографии через Windows Spell Checking API. `src/Folio.Core` — кодировки, сохранение, сессия, история версий, ИИ-клиент, обновления (покрыто тестами). Каждый коммит собирается на GitHub Actions и проходит самопроверку на Windows со скриншотами.
+To run the UI tour on Windows:
 
-## Лицензия
+```powershell
+.\out\Folio.exe --selftest=selftest --selftest-lang=en
+```
 
-[MIT](LICENSE) © 2026 [@yumi_acess](https://helpfulbriefl.github.io/). Иконки — [Lucide](https://lucide.dev) (ISC), редактор — [CodeMirror](https://codemirror.net) (MIT), шрифты — Inter, Literata, JetBrains Mono (OFL).
+The web build and JavaScript language regression tests can also run on Linux. A browser preview uses simulated files and AI responses; it does **not** verify the native Windows app or real provider connectivity.
 
----
+| Directory | Responsibility |
+| --- | --- |
+| `web/` | JavaScript UI, CodeMirror 6, styles, translations and esbuild bundling. |
+| `src/Folio/` | WinForms/WebView2 host, tray, global shortcuts, native dialogs and Windows integration. |
+| `src/Folio.Core/` | File encodings, storage, sessions, version history, AI client and updates. |
+| `tests/Folio.Core.Tests/` | Core unit tests. |
+| `web/tests/` | JavaScript language and settings regression tests. |
 
-## English
+The release workflow builds on Windows, runs core tests and a native UI self-test, and generates screenshots. The pull-request checks validate the UI build, language tests, core tests and desktop compilation without publishing a release.
 
-**Folio is a calm notepad for Windows** that lives in the tray: tabs with hot exit and file version history, reliable encoding detection (UTF-8/16/32, Windows-1251, CP866, KOI8-R, GB18030, Shift-JIS…) with one-click conversion to UTF-8, three writing modes (plain page, code with syntax highlighting, proofreading with the Windows spell checker), a reader view for Markdown and AI chat exports, AI editing with your own key (OpenAI, OpenRouter, DeepSeek, Groq, Mistral, Ollama, LM Studio or any OpenAI-compatible endpoint) shown as reviewable changes, and a global quick-note hotkey (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>).
+## Project status and collaboration
 
-[**Download Folio.exe**](https://github.com/helpfulbriefl/folio/releases/latest/download/Folio.exe) — Windows 10/11 x64, a single file, no installer. It is not code-signed, so SmartScreen may ask you to confirm (*More info → Run anyway*). Requires the Microsoft Edge WebView2 Runtime (built into Windows 11). Create an empty `folio.portable` file next to the exe for portable mode. If the window stays white or empty, Folio restarts itself in compatibility mode (no GPU acceleration); you can also start it with `Folio.exe --compat` or turn it on in *Settings → Advanced*. The log is in `%LocalAppData%\Folio\logs`. The interface is available in Russian, English and Chinese; custom translations can be added from a template.
+Folio is an independent, solo-maintained project. Bug reports, translations and reproducible compatibility reports are welcome. Open an [issue](https://github.com/helpfulbriefl/folio/issues) before proposing a large change.
+
+Interested in supporting development or helping test an OpenAI-compatible provider? Contact [@yumi_acess](https://t.me/yumi_acess) or visit the [developer portfolio](https://helpfulbriefl.github.io/). Any future sponsorship will be disclosed; no sponsor key is bundled with the public app.
+
+The badges above show live GitHub build/release information and **downloads of the executable across releases**. Downloads are not unique users or active-user counts, and automated or repeated downloads can contribute to them. No adoption or benchmark numbers are claimed.
+
+## License and credits
+
+[MIT](LICENSE) © 2026 helpfulbriefl. Icons: [Lucide](https://lucide.dev) (ISC) and developer-icons (MIT). Editor: [CodeMirror](https://codemirror.net) (MIT). Fonts: Inter, Literata and JetBrains Mono (OFL).

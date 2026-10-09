@@ -3,7 +3,7 @@ import { host } from './host.js';
 import { Emitter, debounce } from './util.js';
 
 export const DEFAULTS = {
-  lang: 'auto',
+  lang: 'en',              // fresh installs use English; saved languages and explicit 'auto' are preserved
   theme: 'paper',            // paper | graphite | sepia | glass | system
   themeLight: 'paper',
   themeDark: 'graphite',
